@@ -38,6 +38,7 @@ const Dashboard = () => {
     loadLinks();
   }, []);
 
+  // Now we can directly compare UUIDs since both sender/receiver are UUID type
   const sentLinks = links.filter(link => link.sender === user?.id);
   const receivedLinks = links.filter(link => link.receiver === user?.id);
 
