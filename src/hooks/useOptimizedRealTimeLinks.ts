@@ -60,28 +60,93 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
     }
   }, [selectedChannelId, user?.id]);
 
-  // Real-time update handler for shared_links
+  // Optimistic update for instant display
+  const addOptimisticLink = useCallback((newLink: Partial<Link>) => {
+    const optimisticLink: Link = {
+      id: `temp-${Date.now()}`,
+      url: newLink.url || '',
+      sender: newLink.sender || user?.id || '',
+      receiver: newLink.receiver || '',
+      channel_id: newLink.channel_id || null,
+      tags: newLink.tags || null,
+      is_read: false,
+      created_at: new Date().toISOString(),
+      sender_name: 'You',
+      receiver_name: newLink.receiver_name || 'Unknown'
+    };
+
+    setLinks(prevLinks => [optimisticLink, ...prevLinks]);
+    return optimisticLink.id;
+  }, [user?.id]);
+
+  // Update optimistic link with real data
+  const updateOptimisticLink = useCallback((tempId: string, realLink: Link) => {
+    setLinks(prevLinks => 
+      prevLinks.map(link => 
+        link.id === tempId ? realLink : link
+      )
+    );
+  }, []);
+
+  // Remove failed optimistic link
+  const removeOptimisticLink = useCallback((tempId: string) => {
+    setLinks(prevLinks => prevLinks.filter(link => link.id !== tempId));
+  }, []);
+
+  // Real-time update handler for shared_links with immediate updates
   const handleLinkChange = useCallback((payload: any) => {
     console.log('Real-time link update received:', payload);
     
-    // Reload all links to ensure we have complete data with joins
-    loadLinks();
+    if (payload.eventType === 'INSERT') {
+      // For new links, add them immediately if they're not already there (avoid duplicates from optimistic updates)
+      const newLink = payload.new;
+      setLinks(prevLinks => {
+        // Check if this link already exists (from optimistic update or otherwise)
+        const exists = prevLinks.some(link => link.id === newLink.id);
+        if (exists) {
+          // Update existing link with complete data
+          return prevLinks.map(link => 
+            link.id === newLink.id || (link.id.startsWith('temp-') && link.url === newLink.url && link.sender === newLink.sender)
+              ? { ...newLink, sender_name: 'Loading...', receiver_name: 'Loading...' }
+              : link
+          );
+        } else {
+          // Add new link
+          return [{ ...newLink, sender_name: 'Loading...', receiver_name: 'Loading...' }, ...prevLinks];
+        }
+      });
+      
+      // Load complete link data with profile joins
+      setTimeout(loadLinks, 100);
+    } else if (payload.eventType === 'UPDATE') {
+      // Handle updates (like read status changes)
+      const updatedLink = payload.new;
+      setLinks(prevLinks =>
+        prevLinks.map(link =>
+          link.id === updatedLink.id ? { ...link, ...updatedLink } : link
+        )
+      );
+    } else if (payload.eventType === 'DELETE') {
+      // Handle deletions
+      const deletedId = payload.old.id;
+      setLinks(prevLinks => prevLinks.filter(link => link.id !== deletedId));
+    }
   }, [loadLinks]);
 
   // Real-time update handler for conversations with shared_link_id
   const handleConversationChange = useCallback((payload: any) => {
-    // Type guard to safely access shared_link_id
     if (payload.new && typeof payload.new === 'object' && 'shared_link_id' in payload.new && payload.new.shared_link_id) {
       console.log('Chat message with link detected, refreshing links');
-      loadLinks();
+      // Small delay to ensure consistency
+      setTimeout(loadLinks, 50);
     }
   }, [loadLinks]);
 
   // Real-time update handler for reactions
   const handleReactionChange = useCallback((payload: any) => {
     console.log('Real-time reaction update received:', payload);
-    // Reactions affect link display, so refresh links
-    loadLinks();
+    // Reactions affect link display, so refresh links with minimal delay
+    setTimeout(loadLinks, 50);
   }, [loadLinks]);
 
   // Memoize filtered received links to prevent unnecessary re-renders
@@ -101,9 +166,9 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
   useEffect(() => {
     if (!user) return;
 
-    // Enhanced real-time subscription for comprehensive synchronization
+    // Enhanced real-time subscription for immediate synchronization
     const channel = supabase
-      .channel('realtime_links_sync')
+      .channel('instant_links_sync')
       .on(
         'postgres_changes',
         {
@@ -143,6 +208,9 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
     receivedLinks,
     sentLinks,
     loading,
-    refetch: loadLinks
+    refetch: loadLinks,
+    addOptimisticLink,
+    updateOptimisticLink,
+    removeOptimisticLink
   };
 };

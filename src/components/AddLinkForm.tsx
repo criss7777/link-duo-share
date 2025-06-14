@@ -12,6 +12,9 @@ import { Send, Link2, Tag } from 'lucide-react';
 interface AddLinkFormProps {
   onSuccess: () => void;
   selectedChannelId?: string | null;
+  addOptimisticLink?: (link: any) => string;
+  updateOptimisticLink?: (tempId: string, realLink: any) => void;
+  removeOptimisticLink?: (tempId: string) => void;
 }
 
 interface Channel {
@@ -24,7 +27,13 @@ interface Profile {
   username: string;
 }
 
-const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
+const AddLinkForm = ({ 
+  onSuccess, 
+  selectedChannelId, 
+  addOptimisticLink, 
+  updateOptimisticLink, 
+  removeOptimisticLink 
+}: AddLinkFormProps) => {
   const [url, setUrl] = useState('');
   const [receiverUserId, setReceiverUserId] = useState('');
   const [channelId, setChannelId] = useState(selectedChannelId || '');
@@ -105,6 +114,8 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
     e.preventDefault();
     setLoading(true);
 
+    let tempLinkId: string | null = null;
+
     try {
       if (!receiverUserId) {
         throw new Error('Please select a receiver');
@@ -117,7 +128,21 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
       console.log('Submitting link with:', { url, receiverUserId, channelId, sender: user?.id });
 
       const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      const receiverProfile = profiles.find(p => p.id === receiverUserId);
+
+      // Add optimistic update for instant display
+      if (addOptimisticLink) {
+        tempLinkId = addOptimisticLink({
+          url,
+          receiver: receiverUserId,
+          sender: user?.id,
+          channel_id: channelId,
+          tags: tagsArray.length > 0 ? tagsArray : null,
+          receiver_name: receiverProfile?.username || 'Unknown'
+        });
+      }
       
+      // Create the actual link in the database
       const { data: linkData, error: linkError } = await supabase
         .from('shared_links')
         .insert({
@@ -127,19 +152,36 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
           channel_id: channelId,
           tags: tagsArray.length > 0 ? tagsArray : null,
         })
-        .select('id')
+        .select(`
+          *,
+          channels(name),
+          sender_profile:profiles!shared_links_sender_fkey(username),
+          receiver_profile:profiles!shared_links_receiver_fkey(username)
+        `)
         .single();
 
       if (linkError) {
         console.error('Error creating link:', linkError);
+        // Remove optimistic update on error
+        if (tempLinkId && removeOptimisticLink) {
+          removeOptimisticLink(tempLinkId);
+        }
         throw linkError;
       }
 
       console.log('Link created successfully:', linkData);
 
-      // Get receiver username for the chat message
-      const receiverProfile = profiles.find(p => p.id === receiverUserId);
-      
+      // Update optimistic link with real data
+      if (tempLinkId && updateOptimisticLink && linkData) {
+        const transformedLink = {
+          ...linkData,
+          sender_name: linkData.sender_profile?.username || 'Unknown',
+          receiver_name: linkData.receiver_profile?.username || 'Unknown'
+        };
+        updateOptimisticLink(tempLinkId, transformedLink);
+      }
+
+      // Post chat message
       if (linkData?.id && receiverProfile) {
         try {
           await postChatMessage(linkData.id, receiverProfile.username);
@@ -156,13 +198,8 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
       setChannelId(selectedChannelId || '');
       setTags('');
       
-      // Trigger immediate refresh for real-time updates
+      // Trigger refresh for any additional synchronization
       onSuccess();
-      
-      // Add a small delay and trigger another refresh to ensure synchronization
-      setTimeout(() => {
-        onSuccess();
-      }, 500);
       
       toast({
         title: "Link shared!",
@@ -170,6 +207,12 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
       });
     } catch (error: any) {
       console.error('Error in handleSubmit:', error);
+      
+      // Remove optimistic update on error
+      if (tempLinkId && removeOptimisticLink) {
+        removeOptimisticLink(tempLinkId);
+      }
+      
       toast({
         title: "Failed to share link",
         description: error.message,

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +14,16 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<string>('received');
   const { user } = useAuth();
   
-  const { links, receivedLinks, sentLinks, loading, refetch: refetchLinks } = useOptimizedRealTimeLinks(selectedChannelId);
+  const { 
+    links, 
+    receivedLinks, 
+    sentLinks, 
+    loading, 
+    refetch: refetchLinks,
+    addOptimisticLink,
+    updateOptimisticLink,
+    removeOptimisticLink
+  } = useOptimizedRealTimeLinks(selectedChannelId);
 
   const handleChannelSelect = useCallback(async (channelId: string | null) => {
     setSelectedChannelId(channelId);
@@ -110,7 +118,13 @@ const Dashboard = () => {
 
             <div className="w-80 border-l border-slate-200 bg-[#f8f9fa] p-6 overflow-auto">
               <div className="sticky top-0">
-                <AddLinkForm onSuccess={refetchLinks} selectedChannelId={selectedChannelId} />
+                <AddLinkForm 
+                  onSuccess={refetchLinks} 
+                  selectedChannelId={selectedChannelId}
+                  addOptimisticLink={addOptimisticLink}
+                  updateOptimisticLink={updateOptimisticLink}
+                  removeOptimisticLink={removeOptimisticLink}
+                />
               </div>
             </div>
           </div>
