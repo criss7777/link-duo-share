@@ -19,10 +19,11 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // Use the new real-time hook for links
+  // Use the real-time hook for links
   const { links, loading, refetch: refetchLinks } = useRealTimeLinks(selectedChannelId);
 
   const handleChannelSelect = async (channelId: string | null) => {
+    console.log('Channel selected:', channelId);
     setSelectedChannelId(channelId);
     
     if (channelId) {
@@ -74,7 +75,13 @@ const Dashboard = () => {
     loadUpworkChannel();
   }, []);
 
-  const receivedLinks = links.filter(link => link.receiver === user?.id);
+  // Filter received links for the current user
+  const receivedLinks = links.filter(link => {
+    console.log('Filtering link:', link, 'user:', user?.id);
+    return link.receiver === user?.id;
+  });
+
+  console.log('Received links:', receivedLinks);
 
   if (loading) {
     return (

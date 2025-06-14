@@ -26,6 +26,8 @@ export const useRealTimeLinks = (selectedChannelId: string | null) => {
 
   const loadLinks = async () => {
     try {
+      console.log('Loading links for channel:', selectedChannelId);
+      
       let query = supabase
         .from('shared_links')
         .select(`
@@ -42,7 +44,12 @@ export const useRealTimeLinks = (selectedChannelId: string | null) => {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading links:', error);
+        throw error;
+      }
+      
+      console.log('Loaded links data:', data);
       
       const transformedData = data?.map(link => ({
         ...link,
@@ -50,6 +57,7 @@ export const useRealTimeLinks = (selectedChannelId: string | null) => {
         receiver_name: link.receiver_profile?.username || 'Unknown'
       })) || [];
       
+      console.log('Transformed links:', transformedData);
       setLinks(transformedData);
     } catch (error: any) {
       console.error('Error loading links:', error);
@@ -60,14 +68,16 @@ export const useRealTimeLinks = (selectedChannelId: string | null) => {
 
   useEffect(() => {
     loadLinks();
-  }, [selectedChannelId]);
+  }, [selectedChannelId, user?.id]);
 
   useEffect(() => {
     if (!user) return;
 
+    console.log('Setting up real-time subscription for shared_links');
+
     // Set up real-time subscription for shared_links
     const channel = supabase
-      .channel('shared_links_changes')
+      .channel('shared_links_realtime')
       .on(
         'postgres_changes',
         {
@@ -76,16 +86,22 @@ export const useRealTimeLinks = (selectedChannelId: string | null) => {
           table: 'shared_links'
         },
         (payload) => {
-          console.log('Real-time link change:', payload);
-          loadLinks(); // Reload links when any change occurs
+          console.log('Real-time link change received:', payload);
+          
+          // For any change (INSERT, UPDATE, DELETE), reload all links
+          // This ensures we get the latest data with proper joins
+          loadLinks();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+      });
 
     return () => {
+      console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
-  }, [user, selectedChannelId]);
+  }, [user?.id, selectedChannelId]);
 
   return {
     links,
