@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Share, UserPlus, LogIn } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -27,6 +27,30 @@ const Auth = () => {
     }
   }, [user, navigate]);
 
+  const updateUserProfile = async (userId: string, email: string) => {
+    let username = email; // Default fallback
+    
+    // Set specific usernames based on email
+    if (email === 'user1@example.com') {
+      username = 'Alex';
+    } else if (email === 'user2@example.com') {
+      username = 'Kristi';
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username })
+        .eq('id', userId);
+      
+      if (error) {
+        console.error('Error updating profile:', error);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -40,6 +64,11 @@ const Auth = () => {
           variant: "destructive",
         });
       } else {
+        // Get the current user after successful sign in
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await updateUserProfile(user.id, email);
+        }
         navigate('/');
       }
     } catch (error: any) {
@@ -202,8 +231,8 @@ const Auth = () => {
               </p>
               <div className="mt-2 text-xs text-amber-700">
                 <p className="font-medium">For testing, use:</p>
-                <p>• user1@example.com</p>
-                <p>• user2@example.com</p>
+                <p>• user1@example.com → Alex</p>
+                <p>• user2@example.com → Kristi</p>
                 <p>• Password: any password</p>
               </div>
             </div>
