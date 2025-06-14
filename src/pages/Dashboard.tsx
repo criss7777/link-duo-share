@@ -15,7 +15,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<string>('received');
   const { user } = useAuth();
   
-  const { links, receivedLinks, loading, refetch: refetchLinks } = useOptimizedRealTimeLinks(selectedChannelId);
+  const { links, receivedLinks, sentLinks, loading, refetch: refetchLinks } = useOptimizedRealTimeLinks(selectedChannelId);
 
   const handleChannelSelect = useCallback(async (channelId: string | null) => {
     setSelectedChannelId(channelId);
@@ -101,6 +101,7 @@ const Dashboard = () => {
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 receivedLinks={receivedLinks}
+                sentLinks={sentLinks}
                 onRefresh={refetchLinks}
                 selectedChannelId={selectedChannelId}
                 selectedChannelName={selectedChannelName}

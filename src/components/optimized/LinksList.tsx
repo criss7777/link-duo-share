@@ -11,15 +11,22 @@ interface Link {
   is_read: boolean | null;
   created_at: string | null;
   channels?: { name: string };
+  receiver_name?: string;
 }
 
 interface LinksListProps {
   links: Link[];
   onRefresh: () => void;
   emptyMessage?: string;
+  showReadStatus?: boolean;
 }
 
-const LinksList = memo(({ links, onRefresh, emptyMessage = "No links received yet" }: LinksListProps) => {
+const LinksList = memo(({ 
+  links, 
+  onRefresh, 
+  emptyMessage = "No links received yet",
+  showReadStatus = false 
+}: LinksListProps) => {
   if (links.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -43,6 +50,7 @@ const LinksList = memo(({ links, onRefresh, emptyMessage = "No links received ye
             receiver: link.receiver
           }}
           onRefresh={onRefresh}
+          showReadStatus={showReadStatus}
         />
       ))}
     </div>

@@ -65,6 +65,11 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
     return links.filter(link => link.receiver === user?.id);
   }, [links, user?.id]);
 
+  // Memoize filtered sent links to prevent unnecessary re-renders
+  const sentLinks = useMemo(() => {
+    return links.filter(link => link.sender === user?.id);
+  }, [links, user?.id]);
+
   useEffect(() => {
     loadLinks();
   }, [loadLinks]);
@@ -95,6 +100,7 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
   return {
     links,
     receivedLinks,
+    sentLinks,
     loading,
     refetch: loadLinks
   };

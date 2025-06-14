@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, MessageCircle, Eye, Trash2 } from 'lucide-react';
+import { ExternalLink, MessageCircle, Eye, Trash2, CheckCircle2, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,11 +20,13 @@ interface SimplifiedLinkCardProps {
     is_read: boolean | null;
     created_at: string | null;
     channels?: { name: string };
+    receiver_name?: string;
   };
   onRefresh: () => void;
+  showReadStatus?: boolean;
 }
 
-const SimplifiedLinkCard = ({ link, onRefresh }: SimplifiedLinkCardProps) => {
+const SimplifiedLinkCard = ({ link, onRefresh, showReadStatus = false }: SimplifiedLinkCardProps) => {
   const [showChat, setShowChat] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -74,6 +76,7 @@ const SimplifiedLinkCard = ({ link, onRefresh }: SimplifiedLinkCardProps) => {
 
   const canDelete = user?.id === link.sender;
   const isReceiver = user?.id === link.receiver;
+  const isSender = user?.id === link.sender;
   const isFunChannel = link.channels?.name === 'Fun';
 
   return (
@@ -129,8 +132,33 @@ const SimplifiedLinkCard = ({ link, onRefresh }: SimplifiedLinkCardProps) => {
         
         {/* Metadata */}
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>From: {link.sender}</span>
+          {showReadStatus && isSender ? (
+            <span>To: {link.receiver_name || 'Unknown'}</span>
+          ) : (
+            <span>From: {link.sender}</span>
+          )}
           <div className="flex items-center gap-2">
+            {/* Read Status for Sent Links */}
+            {showReadStatus && isSender && (
+              <div className="flex items-center gap-1">
+                {link.is_read ? (
+                  <>
+                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                    <Badge variant="secondary" className="text-green-600 text-xs">
+                      Seen
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <Clock className="h-3 w-3 text-orange-500" />
+                    <Badge variant="secondary" className="text-orange-500 text-xs">
+                      Pending
+                    </Badge>
+                  </>
+                )}
+              </div>
+            )}
+            {/* Read Status for Received Links */}
             {link.is_read && isReceiver && (
               <Badge variant="secondary" className="text-green-600 text-xs">
                 Read

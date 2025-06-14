@@ -1,7 +1,7 @@
 
 import React, { memo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Inbox, MessageSquare } from 'lucide-react';
+import { Inbox, MessageSquare, Send } from 'lucide-react';
 import LinksList from './LinksList';
 import Chat from '@/components/Chat';
 
@@ -9,6 +9,7 @@ interface TabsContainerProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   receivedLinks: any[];
+  sentLinks: any[];
   onRefresh: () => void;
   selectedChannelId: string | null;
   selectedChannelName: string;
@@ -18,6 +19,7 @@ const TabsContainer = memo(({
   activeTab, 
   onTabChange, 
   receivedLinks, 
+  sentLinks,
   onRefresh, 
   selectedChannelId, 
   selectedChannelName 
@@ -35,6 +37,13 @@ const TabsContainer = memo(({
               Received ({receivedLinks.length})
             </TabsTrigger>
             <TabsTrigger 
+              value="sent" 
+              className="flex items-center gap-2 px-4 h-8 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm text-slate-600"
+            >
+              <Send className="h-4 w-4" />
+              Sent ({sentLinks.length})
+            </TabsTrigger>
+            <TabsTrigger 
               value="chat"
               className="flex items-center gap-2 px-4 h-8 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm text-slate-600"
             >
@@ -50,6 +59,16 @@ const TabsContainer = memo(({
               links={receivedLinks} 
               onRefresh={onRefresh}
               emptyMessage={selectedChannelId ? 'No links in this channel yet' : 'Links shared with you will appear here'}
+              showReadStatus={false}
+            />
+          </TabsContent>
+
+          <TabsContent value="sent" className="h-full p-6 m-0">
+            <LinksList 
+              links={sentLinks} 
+              onRefresh={onRefresh}
+              emptyMessage={selectedChannelId ? 'No links sent in this channel yet' : 'Links you have shared will appear here'}
+              showReadStatus={true}
             />
           </TabsContent>
 
