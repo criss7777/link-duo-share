@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,7 +156,14 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
       setChannelId(selectedChannelId || '');
       setTags('');
       
+      // Trigger immediate refresh for real-time updates
       onSuccess();
+      
+      // Add a small delay and trigger another refresh to ensure synchronization
+      setTimeout(() => {
+        onSuccess();
+      }, 500);
+      
       toast({
         title: "Link shared!",
         description: "Your link has been shared successfully and posted to team chat.",

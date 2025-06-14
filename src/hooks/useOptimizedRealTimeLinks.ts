@@ -77,6 +77,7 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
   useEffect(() => {
     if (!user) return;
 
+    // Enhanced real-time subscription for better synchronization
     const channel = supabase
       .channel('shared_links_realtime')
       .on(
@@ -86,8 +87,25 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
           schema: 'public',
           table: 'shared_links'
         },
-        () => {
+        (payload) => {
+          console.log('Real-time link update received:', payload);
+          // Immediately reload links to ensure synchronization
           loadLinks();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations'
+        },
+        (payload) => {
+          // Also listen to conversations table for chat-related link updates
+          if (payload.new?.shared_link_id) {
+            console.log('Chat message with link detected, refreshing links');
+            loadLinks();
+          }
         }
       )
       .subscribe();
