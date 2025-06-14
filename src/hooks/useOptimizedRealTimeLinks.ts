@@ -102,7 +102,8 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
         },
         (payload) => {
           // Also listen to conversations table for chat-related link updates
-          if (payload.new?.shared_link_id) {
+          // Type guard to safely access shared_link_id
+          if (payload.new && typeof payload.new === 'object' && 'shared_link_id' in payload.new && payload.new.shared_link_id) {
             console.log('Chat message with link detected, refreshing links');
             loadLinks();
           }
