@@ -2,7 +2,7 @@
 import ChatHeader from './chat/ChatHeader';
 import MessageList from './chat/MessageList';
 import MessageInput from './chat/MessageInput';
-import { useRealTimeChat } from '@/hooks/useRealTimeChat';
+import { useOptimizedRealTimeChat } from '@/hooks/useOptimizedRealTimeChat';
 
 interface ChatProps {
   channelId?: string | null;
@@ -10,7 +10,7 @@ interface ChatProps {
 }
 
 const Chat = ({ channelName = 'general' }: ChatProps) => {
-  const { messages, loading, sendMessage } = useRealTimeChat(channelName);
+  const { messages, loading, sendMessage } = useOptimizedRealTimeChat(channelName);
 
   return (
     <div className="flex flex-col h-full bg-white">

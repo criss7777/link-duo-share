@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -19,15 +19,15 @@ interface Link {
   receiver_name?: string;
 }
 
-export const useRealTimeLinks = (selectedChannelId: string | null) => {
+export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const loadLinks = async () => {
+  const loadLinks = useCallback(async () => {
+    if (!user) return;
+    
     try {
-      console.log('Loading links for channel:', selectedChannelId);
-      
       let query = supabase
         .from('shared_links')
         .select(`
@@ -44,12 +44,7 @@ export const useRealTimeLinks = (selectedChannelId: string | null) => {
 
       const { data, error } = await query;
 
-      if (error) {
-        console.error('Error loading links:', error);
-        throw error;
-      }
-      
-      console.log('Loaded links data:', data);
+      if (error) throw error;
       
       const transformedData = data?.map(link => ({
         ...link,
@@ -57,25 +52,26 @@ export const useRealTimeLinks = (selectedChannelId: string | null) => {
         receiver_name: link.receiver_profile?.username || 'Unknown'
       })) || [];
       
-      console.log('Transformed links:', transformedData);
       setLinks(transformedData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading links:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedChannelId, user?.id]);
+
+  // Memoize filtered received links to prevent unnecessary re-renders
+  const receivedLinks = useMemo(() => {
+    return links.filter(link => link.receiver === user?.id);
+  }, [links, user?.id]);
 
   useEffect(() => {
     loadLinks();
-  }, [selectedChannelId, user?.id]);
+  }, [loadLinks]);
 
   useEffect(() => {
     if (!user) return;
 
-    console.log('Setting up real-time subscription for shared_links');
-
-    // Set up real-time subscription for shared_links
     const channel = supabase
       .channel('shared_links_realtime')
       .on(
@@ -85,26 +81,20 @@ export const useRealTimeLinks = (selectedChannelId: string | null) => {
           schema: 'public',
           table: 'shared_links'
         },
-        (payload) => {
-          console.log('Real-time link change received:', payload);
-          
-          // For any change (INSERT, UPDATE, DELETE), reload all links
-          // This ensures we get the latest data with proper joins
+        () => {
           loadLinks();
         }
       )
-      .subscribe((status) => {
-        console.log('Real-time subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
-      console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
-  }, [user?.id, selectedChannelId]);
+  }, [loadLinks, user?.id]);
 
   return {
     links,
+    receivedLinks,
     loading,
     refetch: loadLinks
   };

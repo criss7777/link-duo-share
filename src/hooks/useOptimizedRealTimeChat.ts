@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,18 +16,17 @@ interface Message {
   };
 }
 
-export const useRealTimeChat = (channelName: string) => {
+export const useOptimizedRealTimeChat = (channelName: string) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentChannelId, setCurrentChannelId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const loadOrCreateChannel = async () => {
+  const loadOrCreateChannel = useCallback(async () => {
     try {
       const targetChannelName = channelName === 'All Links' ? 'general' : channelName;
       
-      // Try to find existing channel
       let { data, error } = await supabase
         .from('channels')
         .select('id')
@@ -35,7 +34,6 @@ export const useRealTimeChat = (channelName: string) => {
         .single();
 
       if (error && error.code === 'PGRST116') {
-        // Channel doesn't exist, create it
         const { data: newChannel, error: createError } = await supabase
           .from('channels')
           .insert({ name: targetChannelName })
@@ -59,9 +57,9 @@ export const useRealTimeChat = (channelName: string) => {
       });
       return null;
     }
-  };
+  }, [channelName, toast]);
 
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     if (!currentChannelId) return;
     
     try {
@@ -84,10 +82,10 @@ export const useRealTimeChat = (channelName: string) => {
         variant: "destructive",
       });
     }
-  };
+  }, [currentChannelId, toast]);
 
-  const sendMessage = async (message: string) => {
-    if (!currentChannelId || !user) return;
+  const sendMessage = useCallback(async (message: string) => {
+    if (!currentChannelId || !user || loading) return;
     
     setLoading(true);
     try {
@@ -101,7 +99,6 @@ export const useRealTimeChat = (channelName: string) => {
         });
 
       if (error) throw error;
-      // Don't reload here, real-time will handle it
     } catch (error: any) {
       toast({
         title: "Error sending message",
@@ -111,22 +108,21 @@ export const useRealTimeChat = (channelName: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentChannelId, user, loading, toast]);
 
   useEffect(() => {
     loadOrCreateChannel();
-  }, [channelName]);
+  }, [loadOrCreateChannel]);
 
   useEffect(() => {
     if (currentChannelId) {
       loadMessages();
     }
-  }, [currentChannelId]);
+  }, [loadMessages, currentChannelId]);
 
   useEffect(() => {
     if (!currentChannelId || !user) return;
 
-    // Set up real-time subscription for conversations
     const channel = supabase
       .channel(`conversations_${currentChannelId}`)
       .on(
@@ -137,9 +133,8 @@ export const useRealTimeChat = (channelName: string) => {
           table: 'conversations',
           filter: `channel_id=eq.${currentChannelId}`
         },
-        (payload) => {
-          console.log('Real-time message change:', payload);
-          loadMessages(); // Reload messages when any change occurs
+        () => {
+          loadMessages();
         }
       )
       .subscribe();
@@ -147,7 +142,7 @@ export const useRealTimeChat = (channelName: string) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentChannelId, user]);
+  }, [currentChannelId, user, loadMessages]);
 
   return {
     messages,
