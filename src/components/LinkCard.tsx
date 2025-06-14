@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ExternalLink, MessageCircle, Upload, Trash2 } from 'lucide-react';
+import { ExternalLink, MessageCircle, Upload, Trash2, Eye, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,6 +21,7 @@ interface LinkCardProps {
     receiver: string;
     is_read: boolean | null;
     created_at: string | null;
+    channels?: { name: string };
   };
   onRefresh: () => void;
 }
@@ -31,6 +32,7 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
   const [newComment, setNewComment] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [reactions, setReactions] = useState<any[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -56,10 +58,94 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
     }
   };
 
+  const loadReactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reactions')
+        .select(`
+          *,
+          profiles:user_id (username, email)
+        `)
+        .eq('shared_link_id', link.id);
+
+      if (error) throw error;
+      setReactions(data || []);
+    } catch (error: any) {
+      console.error('Error loading reactions:', error);
+    }
+  };
+
   const toggleComments = () => {
     setShowComments(!showComments);
     if (!showComments) {
       loadComments();
+      loadReactions();
+    }
+  };
+
+  const markAsRead = async () => {
+    if (link.is_read || user?.id === link.sender) return;
+    
+    try {
+      const { error } = await supabase
+        .from('shared_links')
+        .update({ is_read: true })
+        .eq('id', link.id);
+
+      if (error) throw error;
+      onRefresh();
+    } catch (error: any) {
+      toast({
+        title: "Error marking as read",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addReaction = async (type: 'like' | 'dislike') => {
+    try {
+      // Check if user already reacted
+      const existingReaction = reactions.find(r => r.user_id === user?.id);
+      
+      if (existingReaction) {
+        if (existingReaction.reaction_type === type) {
+          // Remove reaction if same type
+          const { error } = await supabase
+            .from('reactions')
+            .delete()
+            .eq('id', existingReaction.id);
+          
+          if (error) throw error;
+        } else {
+          // Update reaction type
+          const { error } = await supabase
+            .from('reactions')
+            .update({ reaction_type: type })
+            .eq('id', existingReaction.id);
+          
+          if (error) throw error;
+        }
+      } else {
+        // Add new reaction
+        const { error } = await supabase
+          .from('reactions')
+          .insert({
+            shared_link_id: link.id,
+            user_id: user?.id,
+            reaction_type: type,
+          });
+        
+        if (error) throw error;
+      }
+      
+      loadReactions();
+    } catch (error: any) {
+      toast({
+        title: "Error adding reaction",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -149,9 +235,13 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
   };
 
   const canDelete = user?.id === link.sender;
+  const isReceiver = user?.id === link.receiver;
+  const userReaction = reactions.find(r => r.user_id === user?.id);
+  const likesCount = reactions.filter(r => r.reaction_type === 'like').length;
+  const dislikesCount = reactions.filter(r => r.reaction_type === 'dislike').length;
 
   return (
-    <Card className="w-full">
+    <Card className={`w-full ${!link.is_read && isReceiver ? 'border-blue-500 border-2' : ''}`}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -162,10 +252,22 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                onClick={markAsRead}
               >
                 <ExternalLink className="h-4 w-4" />
                 Visit Link
               </a>
+              {!link.is_read && isReceiver && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={markAsRead}
+                  className="text-green-600 hover:text-green-800"
+                >
+                  <Eye className="h-4 w-4" />
+                  Mark as Read
+                </Button>
+              )}
               {canDelete && (
                 <Button
                   variant="ghost"
@@ -178,6 +280,11 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
               )}
             </div>
           </div>
+          {link.is_read && isReceiver && (
+            <Badge variant="secondary" className="text-green-600">
+              Read
+            </Badge>
+          )}
         </div>
       </CardHeader>
       
@@ -208,6 +315,26 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
           >
             <MessageCircle className="h-4 w-4" />
             {showComments ? 'Hide Comments' : 'Show Comments'}
+          </Button>
+          
+          <Button
+            variant={userReaction?.reaction_type === 'like' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => addReaction('like')}
+            className="flex items-center gap-1"
+          >
+            <ThumbsUp className="h-4 w-4" />
+            {likesCount}
+          </Button>
+          
+          <Button
+            variant={userReaction?.reaction_type === 'dislike' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => addReaction('dislike')}
+            className="flex items-center gap-1"
+          >
+            <ThumbsDown className="h-4 w-4" />
+            {dislikesCount}
           </Button>
         </div>
         

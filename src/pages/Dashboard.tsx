@@ -23,7 +23,9 @@ const Dashboard = () => {
         .from('shared_links')
         .select(`
           *,
-          channels(name)
+          channels(name),
+          sender_profile:sender(username, email),
+          receiver_profile:receiver(username, email)
         `)
         .order('created_at', { ascending: false });
 
@@ -35,7 +37,15 @@ const Dashboard = () => {
       const { data, error } = await query;
 
       if (error) throw error;
-      setLinks(data || []);
+      
+      // Transform the data to include readable sender/receiver names
+      const transformedData = data?.map(link => ({
+        ...link,
+        sender_name: link.sender_profile?.username || link.sender_profile?.email || 'Unknown',
+        receiver_name: link.receiver_profile?.username || link.receiver_profile?.email || 'Unknown'
+      })) || [];
+      
+      setLinks(transformedData);
     } catch (error: any) {
       toast({
         title: "Error loading links",
@@ -68,7 +78,7 @@ const Dashboard = () => {
     }
   };
 
-  // Now we can directly compare UUIDs since both sender/receiver are UUID type
+  // Filter links by sender/receiver using UUIDs
   const sentLinks = links.filter(link => link.sender === user?.id);
   const receivedLinks = links.filter(link => link.receiver === user?.id);
 
@@ -99,6 +109,14 @@ const Dashboard = () => {
               <h2 className="text-2xl font-bold text-gray-900">
                 # {selectedChannelName}
               </h2>
+              <p className="text-gray-600 mt-1">
+                {selectedChannelName === 'Upwork jobs' 
+                  ? 'Share job opportunities and work-related links' 
+                  : selectedChannelName === 'Fun' 
+                  ? 'Casual conversations and fun links'
+                  : 'All your shared links across channels'
+                }
+              </p>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -129,7 +147,11 @@ const Dashboard = () => {
                         receivedLinks.map((link) => (
                           <LinkCard
                             key={link.id}
-                            link={link}
+                            link={{
+                              ...link,
+                              sender: link.sender_name,
+                              receiver: link.receiver_name
+                            }}
                             onRefresh={loadLinks}
                           />
                         ))
@@ -147,7 +169,11 @@ const Dashboard = () => {
                         sentLinks.map((link) => (
                           <LinkCard
                             key={link.id}
-                            link={link}
+                            link={{
+                              ...link,
+                              sender: link.sender_name,
+                              receiver: link.receiver_name
+                            }}
                             onRefresh={loadLinks}
                           />
                         ))
