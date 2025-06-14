@@ -1,11 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ExternalLink, MessageCircle, Upload, Trash2, Eye } from 'lucide-react';
+import { ExternalLink, MessageCircle, Upload, Trash2, Eye, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,6 +32,8 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
   const [newComment, setNewComment] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [reactions, setReactions] = useState<any[]>([]);
+  const [userReaction, setUserReaction] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -57,12 +59,74 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
     }
   };
 
+  const loadReactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reactions')
+        .select('*')
+        .eq('shared_link_id', link.id);
+
+      if (error) throw error;
+      setReactions(data || []);
+      
+      // Find current user's reaction
+      const currentUserReaction = data?.find(r => r.user_id === user?.id);
+      setUserReaction(currentUserReaction?.reaction_type || null);
+    } catch (error: any) {
+      toast({
+        title: "Error loading reactions",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const toggleComments = () => {
     setShowComments(!showComments);
     if (!showComments) {
       loadComments();
     }
   };
+
+  const toggleReaction = async (reactionType: 'like' | 'dislike') => {
+    try {
+      if (userReaction === reactionType) {
+        // Remove reaction
+        const { error } = await supabase
+          .from('reactions')
+          .delete()
+          .eq('shared_link_id', link.id)
+          .eq('user_id', user?.id);
+
+        if (error) throw error;
+        setUserReaction(null);
+      } else {
+        // Add or update reaction
+        const { error } = await supabase
+          .from('reactions')
+          .upsert({
+            shared_link_id: link.id,
+            user_id: user?.id,
+            reaction_type: reactionType
+          });
+
+        if (error) throw error;
+        setUserReaction(reactionType);
+      }
+      
+      loadReactions();
+    } catch (error: any) {
+      toast({
+        title: "Error updating reaction",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    loadReactions();
+  }, [link.id]);
 
   const markAsRead = async () => {
     if (link.is_read || user?.id === link.sender) return;
@@ -171,6 +235,8 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
 
   const canDelete = user?.id === link.sender;
   const isReceiver = user?.id === link.receiver;
+  const likesCount = reactions.filter(r => r.reaction_type === 'like').length;
+  const dislikesCount = reactions.filter(r => r.reaction_type === 'dislike').length;
 
   return (
     <Card className={`w-full ${!link.is_read && isReceiver ? 'border-blue-500 border-2' : ''}`}>
@@ -238,7 +304,26 @@ const LinkCard = ({ link, onRefresh }: LinkCardProps) => {
           <span>{new Date(link.created_at || '').toLocaleDateString()}</span>
         </div>
         
-        <div className="flex gap-2">
+        {/* Reactions */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => toggleReaction('like')}
+            className={`flex items-center gap-1 ${userReaction === 'like' ? 'text-green-600' : ''}`}
+          >
+            <ThumbsUp className="h-4 w-4" />
+            {likesCount > 0 && likesCount}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => toggleReaction('dislike')}
+            className={`flex items-center gap-1 ${userReaction === 'dislike' ? 'text-red-600' : ''}`}
+          >
+            <ThumbsDown className="h-4 w-4" />
+            {dislikesCount > 0 && dislikesCount}
+          </Button>
           <Button
             variant="outline"
             size="sm"

@@ -23,7 +23,9 @@ const Dashboard = () => {
         .from('shared_links')
         .select(`
           *,
-          channels(name)
+          channels(name),
+          sender_profile:profiles!shared_links_sender_fkey(username),
+          receiver_profile:profiles!shared_links_receiver_fkey(username)
         `)
         .order('created_at', { ascending: false });
 
@@ -39,8 +41,8 @@ const Dashboard = () => {
       // Transform the data to include readable sender/receiver names
       const transformedData = data?.map(link => ({
         ...link,
-        sender_name: link.sender || 'Unknown',
-        receiver_name: link.receiver || 'Unknown'
+        sender_name: link.sender_profile?.username || 'Unknown',
+        receiver_name: link.receiver_profile?.username || 'Unknown'
       })) || [];
       
       setLinks(transformedData);
@@ -76,9 +78,9 @@ const Dashboard = () => {
     }
   };
 
-  // Filter links by sender/receiver using current string format
-  const sentLinks = links.filter(link => link.sender === user?.email);
-  const receivedLinks = links.filter(link => link.receiver === user?.email);
+  // Filter links by sender/receiver using current UUID format
+  const sentLinks = links.filter(link => link.sender === user?.id);
+  const receivedLinks = links.filter(link => link.receiver === user?.id);
 
   if (loading) {
     return (
