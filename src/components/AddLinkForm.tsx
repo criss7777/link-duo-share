@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Link2, Users, Hash, Tag, Send } from 'lucide-react';
+import { Send, Link2, Tag } from 'lucide-react';
 
 interface AddLinkFormProps {
   onSuccess: () => void;
@@ -73,26 +74,31 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
     setChannelId(selectedChannelId || '');
   }, [selectedChannelId]);
 
-  const postChatMessage = async (linkId: string, receiverUsername: string, channelName: string) => {
+  const postChatMessage = async (linkId: string, receiverUsername: string) => {
     try {
+      console.log('Posting chat message with:', { linkId, receiverUsername, channelId, userId: user?.id });
+      
       const message = `📎 New link shared with @${receiverUsername}: ${url}`;
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('conversations')
         .insert({
           channel_id: channelId,
           shared_link_id: linkId,
           user_id: user?.id,
           message: message,
-        });
+        })
+        .select();
 
       if (error) {
         console.error('Error posting chat message:', error);
-        // Don't throw here as the link was still shared successfully
+        throw error;
       }
+      
+      console.log('Chat message posted successfully:', data);
     } catch (error: any) {
-      console.error('Error posting chat message:', error);
-      // Don't throw here as the link was still shared successfully
+      console.error('Failed to post chat message:', error);
+      throw error;
     }
   };
 
@@ -109,9 +115,11 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
         throw new Error('Please select a channel');
       }
 
+      console.log('Submitting link with:', { url, receiverUserId, channelId, sender: user?.id });
+
       const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
       
-      const { data: linkData, error } = await supabase
+      const { data: linkData, error: linkError } = await supabase
         .from('shared_links')
         .insert({
           url,
@@ -123,16 +131,27 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
         .select('id')
         .single();
 
-      if (error) throw error;
-
-      // Get receiver username and channel name for the chat message
-      const receiverProfile = profiles.find(p => p.id === receiverUserId);
-      const channel = channels.find(c => c.id === channelId);
-      
-      if (linkData?.id && receiverProfile && channel) {
-        await postChatMessage(linkData.id, receiverProfile.username, channel.name);
+      if (linkError) {
+        console.error('Error creating link:', linkError);
+        throw linkError;
       }
 
+      console.log('Link created successfully:', linkData);
+
+      // Get receiver username for the chat message
+      const receiverProfile = profiles.find(p => p.id === receiverUserId);
+      
+      if (linkData?.id && receiverProfile) {
+        try {
+          await postChatMessage(linkData.id, receiverProfile.username);
+          console.log('Chat message posted successfully');
+        } catch (chatError) {
+          console.error('Chat message failed but link was shared:', chatError);
+          // Continue with success since link was shared
+        }
+      }
+
+      // Reset form
       setUrl('');
       setReceiverUserId('');
       setChannelId(selectedChannelId || '');
@@ -144,6 +163,7 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
         description: "Your link has been shared successfully and posted to team chat.",
       });
     } catch (error: any) {
+      console.error('Error in handleSubmit:', error);
       toast({
         title: "Failed to share link",
         description: error.message,
@@ -220,7 +240,7 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
                 <SelectValue placeholder="Select channel">
                   {channelId && (
                     <div className="flex items-center gap-2">
-                      <Hash className="h-3 w-3 text-slate-500" />
+                      <span className="text-slate-500">#</span>
                       {channels.find(c => c.id === channelId)?.name}
                     </div>
                   )}
@@ -230,7 +250,7 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
                 {channels.map((channel) => (
                   <SelectItem key={channel.id} value={channel.id}>
                     <div className="flex items-center gap-2">
-                      <Hash className="h-3 w-3 text-slate-500" />
+                      <span className="text-slate-500">#</span>
                       {channel.name}
                     </div>
                   </SelectItem>

@@ -9,54 +9,18 @@ import Channels from '@/components/Channels';
 import Chat from '@/components/Chat';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useRealTimeLinks } from '@/hooks/useRealTimeLinks';
 import { Hash, Inbox, MessageSquare, Users } from 'lucide-react';
 
 const Dashboard = () => {
-  const [links, setLinks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [selectedChannelName, setSelectedChannelName] = useState<string>('All Links');
   const [activeTab, setActiveTab] = useState<string>('received');
   const { user } = useAuth();
   const { toast } = useToast();
-
-  const loadLinks = async () => {
-    try {
-      let query = supabase
-        .from('shared_links')
-        .select(`
-          *,
-          channels(name),
-          sender_profile:profiles!shared_links_sender_fkey(username),
-          receiver_profile:profiles!shared_links_receiver_fkey(username)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (selectedChannelId) {
-        query = query.eq('channel_id', selectedChannelId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      
-      const transformedData = data?.map(link => ({
-        ...link,
-        sender_name: link.sender_profile?.username || 'Unknown',
-        receiver_name: link.receiver_profile?.username || 'Unknown'
-      })) || [];
-      
-      setLinks(transformedData);
-    } catch (error: any) {
-      toast({
-        title: "Error loading links",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  // Use the new real-time hook for links
+  const { links, loading, refetch: refetchLinks } = useRealTimeLinks(selectedChannelId);
 
   const handleChannelSelect = async (channelId: string | null) => {
     setSelectedChannelId(channelId);
@@ -73,10 +37,6 @@ const Dashboard = () => {
       setSelectedChannelName('All Links');
     }
   };
-
-  useEffect(() => {
-    loadLinks();
-  }, [selectedChannelId]);
 
   // Auto-select Upwork jobs channel and set default channel for new links
   useEffect(() => {
@@ -231,7 +191,7 @@ const Dashboard = () => {
                                 sender: link.sender_name,
                                 receiver: link.receiver_name
                               }}
-                              onRefresh={loadLinks}
+                              onRefresh={refetchLinks}
                             />
                           ))
                         )}
@@ -249,7 +209,7 @@ const Dashboard = () => {
             {/* Right Sidebar - Add Link Form */}
             <div className="w-80 border-l border-slate-200 bg-[#f8f9fa] p-6 overflow-auto">
               <div className="sticky top-0">
-                <AddLinkForm onSuccess={loadLinks} selectedChannelId={selectedChannelId} />
+                <AddLinkForm onSuccess={refetchLinks} selectedChannelId={selectedChannelId} />
               </div>
             </div>
           </div>
