@@ -72,6 +72,55 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          id: string
+          message: string
+          shared_link_id: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          message: string
+          shared_link_id?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          message?: string
+          shared_link_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_shared_link_id_fkey"
+            columns: ["shared_link_id"]
+            isOneToOne: false
+            referencedRelation: "shared_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       files: {
         Row: {
           comment_id: string | null
@@ -160,6 +209,7 @@ export type Database = {
       reactions: {
         Row: {
           created_at: string | null
+          emoji: string
           id: string
           reaction_type: string | null
           shared_link_id: string | null
@@ -167,6 +217,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          emoji?: string
           id?: string
           reaction_type?: string | null
           shared_link_id?: string | null
@@ -174,6 +225,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          emoji?: string
           id?: string
           reaction_type?: string | null
           shared_link_id?: string | null

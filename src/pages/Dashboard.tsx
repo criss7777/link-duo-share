@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import AddLinkForm from '@/components/AddLinkForm';
-import LinkCard from '@/components/LinkCard';
+import SimplifiedLinkCard from '@/components/SimplifiedLinkCard';
 import Channels from '@/components/Channels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -113,7 +113,7 @@ const Dashboard = () => {
                 {selectedChannelName === 'Upwork jobs' 
                   ? 'Share job opportunities and work-related links' 
                   : selectedChannelName === 'Fun' 
-                  ? 'Casual conversations and fun links'
+                  ? 'Casual conversations and fun links with chat'
                   : 'All your shared links across channels'
                 }
               </p>
@@ -145,7 +145,7 @@ const Dashboard = () => {
                         </div>
                       ) : (
                         receivedLinks.map((link) => (
-                          <LinkCard
+                          <SimplifiedLinkCard
                             key={link.id}
                             link={{
                               ...link,
@@ -167,7 +167,7 @@ const Dashboard = () => {
                         </div>
                       ) : (
                         sentLinks.map((link) => (
-                          <LinkCard
+                          <SimplifiedLinkCard
                             key={link.id}
                             link={{
                               ...link,
