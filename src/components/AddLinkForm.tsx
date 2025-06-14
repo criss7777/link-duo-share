@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -27,8 +25,6 @@ interface Profile {
 
 const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
   const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [receiverUserId, setReceiverUserId] = useState('');
   const [channelId, setChannelId] = useState(selectedChannelId || '');
   const [tags, setTags] = useState('');
@@ -95,8 +91,6 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
         .from('shared_links')
         .insert({
           url,
-          title: title || null,
-          description: description || null,
           receiver: receiverUserId,
           sender: user?.id,
           channel_id: channelId,
@@ -107,8 +101,6 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
 
       // Reset form
       setUrl('');
-      setTitle('');
-      setDescription('');
       setReceiverUserId('');
       setChannelId(selectedChannelId || '');
       setTags('');
@@ -178,27 +170,6 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              placeholder="Give your link a title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Add a description for context"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
           </div>
           
           <div className="space-y-2">
