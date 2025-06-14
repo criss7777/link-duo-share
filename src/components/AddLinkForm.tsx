@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,6 +73,29 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
     setChannelId(selectedChannelId || '');
   }, [selectedChannelId]);
 
+  const postChatMessage = async (linkId: string, receiverUsername: string, channelName: string) => {
+    try {
+      const message = `📎 New link shared with @${receiverUsername}: ${url}`;
+      
+      const { error } = await supabase
+        .from('conversations')
+        .insert({
+          channel_id: channelId,
+          shared_link_id: linkId,
+          user_id: user?.id,
+          message: message,
+        });
+
+      if (error) {
+        console.error('Error posting chat message:', error);
+        // Don't throw here as the link was still shared successfully
+      }
+    } catch (error: any) {
+      console.error('Error posting chat message:', error);
+      // Don't throw here as the link was still shared successfully
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -89,7 +111,7 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
 
       const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
       
-      const { error } = await supabase
+      const { data: linkData, error } = await supabase
         .from('shared_links')
         .insert({
           url,
@@ -97,9 +119,19 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
           sender: user?.id,
           channel_id: channelId,
           tags: tagsArray.length > 0 ? tagsArray : null,
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      // Get receiver username and channel name for the chat message
+      const receiverProfile = profiles.find(p => p.id === receiverUserId);
+      const channel = channels.find(c => c.id === channelId);
+      
+      if (linkData?.id && receiverProfile && channel) {
+        await postChatMessage(linkData.id, receiverProfile.username, channel.name);
+      }
 
       setUrl('');
       setReceiverUserId('');
@@ -109,7 +141,7 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
       onSuccess();
       toast({
         title: "Link shared!",
-        description: "Your link has been shared successfully.",
+        description: "Your link has been shared successfully and posted to team chat.",
       });
     } catch (error: any) {
       toast({
