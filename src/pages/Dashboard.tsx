@@ -9,7 +9,7 @@ import Channels from '@/components/Channels';
 import Chat from '@/components/Chat';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Hash, Inbox, Send, MessageSquare, Users } from 'lucide-react';
+import { Hash, Inbox, MessageSquare, Users } from 'lucide-react';
 
 const Dashboard = () => {
   const [links, setLinks] = useState<any[]>([]);
@@ -58,10 +58,6 @@ const Dashboard = () => {
     }
   };
 
-  useEffect(() => {
-    loadLinks();
-  }, [selectedChannelId]);
-
   const handleChannelSelect = async (channelId: string | null) => {
     setSelectedChannelId(channelId);
     
@@ -78,7 +74,46 @@ const Dashboard = () => {
     }
   };
 
-  const sentLinks = links.filter(link => link.sender === user?.id);
+  useEffect(() => {
+    loadLinks();
+  }, [selectedChannelId]);
+
+  // Auto-select Upwork jobs channel and set default channel for new links
+  useEffect(() => {
+    const loadUpworkChannel = async () => {
+      try {
+        let { data, error } = await supabase
+          .from('channels')
+          .select('id, name')
+          .eq('name', 'Upwork jobs')
+          .single();
+
+        if (error && error.code === 'PGRST116') {
+          // Channel doesn't exist, create it
+          const { data: newChannel, error: createError } = await supabase
+            .from('channels')
+            .insert({ name: 'Upwork jobs' })
+            .select('id, name')
+            .single();
+
+          if (createError) throw createError;
+          data = newChannel;
+        } else if (error) {
+          throw error;
+        }
+
+        if (data) {
+          setSelectedChannelId(data.id);
+          setSelectedChannelName(data.name);
+        }
+      } catch (error: any) {
+        console.error('Error setting up Upwork jobs channel:', error);
+      }
+    };
+
+    loadUpworkChannel();
+  }, []);
+
   const receivedLinks = links.filter(link => link.receiver === user?.id);
 
   if (loading) {
@@ -165,13 +200,6 @@ const Dashboard = () => {
                         Received ({receivedLinks.length})
                       </TabsTrigger>
                       <TabsTrigger 
-                        value="sent"
-                        className="flex items-center gap-2 px-4 h-8 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm text-slate-600"
-                      >
-                        <Send className="h-4 w-4" />
-                        Sent ({sentLinks.length})
-                      </TabsTrigger>
-                      <TabsTrigger 
                         value="chat"
                         className="flex items-center gap-2 px-4 h-8 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm text-slate-600"
                       >
@@ -209,37 +237,9 @@ const Dashboard = () => {
                         )}
                       </div>
                     </TabsContent>
-                    
-                    <TabsContent value="sent" className="h-full p-6 m-0">
-                      <div className="space-y-3">
-                        {sentLinks.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center h-64 text-center">
-                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                              <Send className="h-6 w-6 text-slate-400" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-slate-700 mb-2">No links sent yet</h3>
-                            <p className="text-slate-500 max-w-sm">
-                              {selectedChannelId ? 'Start sharing links in this channel' : 'Links you share will appear here'}
-                            </p>
-                          </div>
-                        ) : (
-                          sentLinks.map((link) => (
-                            <SimplifiedLinkCard
-                              key={link.id}
-                              link={{
-                                ...link,
-                                sender: link.sender_name,
-                                receiver: link.receiver_name
-                              }}
-                              onRefresh={loadLinks}
-                            />
-                          ))
-                        )}
-                      </div>
-                    </TabsContent>
 
                     <TabsContent value="chat" className="h-full m-0">
-                      <Chat />
+                      <Chat channelId={selectedChannelId} channelName={selectedChannelName} />
                     </TabsContent>
                   </div>
                 </Tabs>

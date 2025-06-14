@@ -19,11 +19,16 @@ interface Message {
   };
 }
 
-const Chat = () => {
+interface ChatProps {
+  channelId?: string | null;
+  channelName?: string;
+}
+
+const Chat = ({ channelId, channelName = 'general' }: ChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [generalChannelId, setGeneralChannelId] = useState<string | null>(null);
+  const [currentChannelId, setCurrentChannelId] = useState<string | null>(channelId || null);
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -32,20 +37,22 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const loadGeneralChannelId = async () => {
+  const loadOrCreateChannel = async () => {
     try {
-      // Try to find existing general channel
+      const targetChannelName = channelName === 'All Links' ? 'general' : channelName;
+      
+      // Try to find existing channel
       let { data, error } = await supabase
         .from('channels')
         .select('id')
-        .eq('name', 'general')
+        .eq('name', targetChannelName)
         .single();
 
       if (error && error.code === 'PGRST116') {
         // Channel doesn't exist, create it
         const { data: newChannel, error: createError } = await supabase
           .from('channels')
-          .insert({ name: 'general' })
+          .insert({ name: targetChannelName })
           .select('id')
           .single();
 
@@ -55,19 +62,21 @@ const Chat = () => {
         throw error;
       }
 
-      setGeneralChannelId(data.id);
+      setCurrentChannelId(data.id);
+      return data.id;
     } catch (error: any) {
-      console.error('Error loading general channel:', error);
+      console.error('Error loading/creating channel:', error);
       toast({
         title: "Error loading chat",
-        description: "Could not load the general channel",
+        description: "Could not load the chat channel",
         variant: "destructive",
       });
+      return null;
     }
   };
 
   const loadMessages = async () => {
-    if (!generalChannelId) return;
+    if (!currentChannelId) return;
     
     try {
       const { data, error } = await supabase
@@ -76,7 +85,7 @@ const Chat = () => {
           *,
           profiles:user_id (username, email)
         `)
-        .eq('channel_id', generalChannelId)
+        .eq('channel_id', currentChannelId)
         .is('shared_link_id', null)
         .order('created_at', { ascending: true });
 
@@ -94,14 +103,14 @@ const Chat = () => {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !generalChannelId || !user) return;
+    if (!newMessage.trim() || !currentChannelId || !user) return;
     
     setLoading(true);
     try {
       const { error } = await supabase
         .from('conversations')
         .insert({
-          channel_id: generalChannelId,
+          channel_id: currentChannelId,
           user_id: user.id,
           message: newMessage.trim(),
           shared_link_id: null,
@@ -157,18 +166,20 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    loadGeneralChannelId();
-  }, []);
+    loadOrCreateChannel();
+  }, [channelName]);
 
   useEffect(() => {
-    if (generalChannelId) {
+    if (currentChannelId) {
       loadMessages();
     }
-  }, [generalChannelId]);
+  }, [currentChannelId]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const displayChannelName = channelName === 'All Links' ? 'general' : channelName;
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -176,7 +187,7 @@ const Chat = () => {
       <div className="flex-shrink-0 px-6 py-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <Hash className="h-5 w-5 text-slate-600" />
-          <h2 className="text-xl font-bold text-slate-900">general</h2>
+          <h2 className="text-xl font-bold text-slate-900">{displayChannelName}</h2>
           <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded-full">
             <div className="w-2 h-2 bg-green-500 rounded-full" />
             <span className="text-xs font-medium text-green-700">Active</span>
@@ -194,9 +205,9 @@ const Chat = () => {
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
               <Hash className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-700 mb-2">Welcome to #general</h3>
+            <h3 className="text-lg font-semibold text-slate-700 mb-2">Welcome to #{displayChannelName}</h3>
             <p className="text-slate-500 max-w-sm">
-              This is the beginning of the #general channel. Start the conversation!
+              This is the beginning of the #{displayChannelName} channel. Start the conversation!
             </p>
           </div>
         ) : (
@@ -244,7 +255,7 @@ const Chat = () => {
         <form onSubmit={sendMessage} className="flex gap-3">
           <div className="flex-1 relative">
             <Input
-              placeholder="Message #general"
+              placeholder={`Message #${displayChannelName}`}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               disabled={loading}
