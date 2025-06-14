@@ -6,15 +6,17 @@ import Header from '@/components/Header';
 import AddLinkForm from '@/components/AddLinkForm';
 import SimplifiedLinkCard from '@/components/SimplifiedLinkCard';
 import Channels from '@/components/Channels';
+import Chat from '@/components/Chat';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Hash, Inbox, Send, Sparkles, MessageSquare, Users } from 'lucide-react';
+import { Hash, Inbox, Send, MessageSquare, Users } from 'lucide-react';
 
 const Dashboard = () => {
   const [links, setLinks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [selectedChannelName, setSelectedChannelName] = useState<string>('All Links');
+  const [activeTab, setActiveTab] = useState<string>('received');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -152,7 +154,7 @@ const Dashboard = () => {
             {/* Links Display */}
             <div className="flex-1 flex flex-col">
               <div className="flex-1 overflow-hidden">
-                <Tabs defaultValue="received" className="h-full flex flex-col">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
                   <div className="flex-shrink-0 px-6 py-4 border-b border-slate-100">
                     <TabsList className="h-10 bg-slate-100 p-1 rounded-lg">
                       <TabsTrigger 
@@ -168,6 +170,13 @@ const Dashboard = () => {
                       >
                         <Send className="h-4 w-4" />
                         Sent ({sentLinks.length})
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="chat"
+                        className="flex items-center gap-2 px-4 h-8 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm text-slate-600"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        Team Chat
                       </TabsTrigger>
                     </TabsList>
                   </div>
@@ -227,6 +236,10 @@ const Dashboard = () => {
                           ))
                         )}
                       </div>
+                    </TabsContent>
+
+                    <TabsContent value="chat" className="h-full m-0">
+                      <Chat />
                     </TabsContent>
                   </div>
                 </Tabs>
