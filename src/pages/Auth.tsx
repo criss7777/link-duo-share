@@ -136,9 +136,7 @@ const Auth = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent mb-3">
             LinkVault
           </h1>
-          <p className="text-purple-200/80 text-lg">
-            Secure link sharing for modern teams
-          </p>
+          <p className="text-purple-200/80 text-lg">End-to-End Encryption </p>
         </div>
 
         {/* Main Card */}
