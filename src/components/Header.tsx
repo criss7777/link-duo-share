@@ -1,20 +1,19 @@
 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, Link2, User, Sparkles } from 'lucide-react';
+import { LogOut, Search, Star, Clock, MoreVertical } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
 
 const Header = () => {
   const { user, signOut } = useAuth();
 
-  // Extract initials from email for avatar
   const getInitials = (email: string) => {
     if (email === 'user1@example.com') return 'KR';
     if (email === 'user2@example.com') return 'GL';
     return email.substring(0, 2).toUpperCase();
   };
 
-  // Get display name
   const getDisplayName = (email: string) => {
     if (email === 'user1@example.com') return 'Kristi';
     if (email === 'user2@example.com') return 'Gledi';
@@ -22,54 +21,79 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b border-purple-500/20 px-6 py-4 shadow-lg">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <header className="h-12 bg-[#350d36] flex items-center justify-between px-4 relative z-50 border-b border-[#5b2c5c]">
+      {/* Left Section */}
+      <div className="flex items-center gap-4 min-w-0 flex-1">
+        {/* Workspace Name */}
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-white font-bold text-lg truncate">LinkVault</h1>
+          <div className="w-2 h-2 bg-green-400 rounded-full" />
+        </div>
+
+        {/* Search Bar */}
+        <div className="flex-1 max-w-md relative">
           <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 rounded-lg blur-sm opacity-75" />
-            <div className="relative bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-lg">
-              <Link2 className="h-6 w-6 text-white" />
-            </div>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
-              LinkVault
-            </h1>
-            <p className="text-xs text-purple-300/70 -mt-1">Secure Workspace</p>
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search LinkVault"
+              className="h-8 pl-10 bg-[#5b2c5c]/50 border-[#5b2c5c] text-white placeholder:text-slate-300 focus:bg-white focus:text-slate-900 focus:placeholder:text-slate-500 transition-colors"
+            />
           </div>
         </div>
+      </div>
+
+      {/* Right Section */}
+      <div className="flex items-center gap-2">
+        {/* Action Buttons */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10"
+        >
+          <Clock className="h-4 w-4" />
+        </Button>
         
-        <div className="flex items-center gap-4">
-          {/* User Info */}
-          <div className="flex items-center gap-3 px-4 py-2 bg-white/5 rounded-full border border-white/10">
-            <Avatar className="h-8 w-8 border-2 border-purple-400/50">
-              <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-semibold">
-                {getInitials(user?.email || '')}
-              </AvatarFallback>
-            </Avatar>
-            <div className="text-sm">
-              <p className="text-white font-medium">{getDisplayName(user?.email || '')}</p>
-              <p className="text-purple-300/70 text-xs">{user?.email}</p>
-            </div>
-          </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10"
+        >
+          <Star className="h-4 w-4" />
+        </Button>
 
-          {/* Status Badge */}
-          <div className="flex items-center gap-1 px-3 py-1 bg-green-500/10 border border-green-400/20 rounded-full">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <span className="text-green-300 text-xs font-medium">Online</span>
-          </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
 
-          {/* Sign Out Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={signOut}
-            className="flex items-center gap-2 bg-white/5 border-white/20 text-purple-200 hover:bg-white/10 hover:text-white hover:border-white/30 transition-all duration-200"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
+        {/* User Section */}
+        <div className="flex items-center gap-2 ml-2">
+          <Avatar className="h-7 w-7 border border-white/20">
+            <AvatarFallback className="bg-[#5b2c5c] text-white text-xs font-medium">
+              {getInitials(user?.email || '')}
+            </AvatarFallback>
+          </Avatar>
+          
+          <div className="flex items-center gap-1">
+            <span className="text-white text-sm font-medium hidden sm:block">
+              {getDisplayName(user?.email || '')}
+            </span>
+            <div className="w-2 h-2 bg-green-400 rounded-full" />
+          </div>
         </div>
+
+        {/* Sign Out */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={signOut}
+          className="h-8 px-2 text-white/70 hover:text-white hover:bg-white/10 ml-2"
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
       </div>
     </header>
   );
