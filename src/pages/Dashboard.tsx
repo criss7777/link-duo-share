@@ -5,21 +5,34 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import AddLinkForm from '@/components/AddLinkForm';
 import LinkCard from '@/components/LinkCard';
+import Channels from '@/components/Channels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
 const Dashboard = () => {
   const [links, setLinks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [selectedChannelName, setSelectedChannelName] = useState<string>('All Links');
   const { user } = useAuth();
   const { toast } = useToast();
 
   const loadLinks = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('shared_links')
-        .select('*')
+        .select(`
+          *,
+          channels(name)
+        `)
         .order('created_at', { ascending: false });
+
+      // Filter by channel if one is selected
+      if (selectedChannelId) {
+        query = query.eq('channel_id', selectedChannelId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setLinks(data || []);
@@ -36,7 +49,24 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadLinks();
-  }, []);
+  }, [selectedChannelId]);
+
+  const handleChannelSelect = async (channelId: string | null) => {
+    setSelectedChannelId(channelId);
+    
+    if (channelId) {
+      // Get channel name for display
+      const { data } = await supabase
+        .from('channels')
+        .select('name')
+        .eq('id', channelId)
+        .single();
+      
+      setSelectedChannelName(data?.name || 'Unknown Channel');
+    } else {
+      setSelectedChannelName('All Links');
+    }
+  };
 
   // Now we can directly compare UUIDs since both sender/receiver are UUID type
   const sentLinks = links.filter(link => link.sender === user?.id);
@@ -46,8 +76,11 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="text-center">Loading...</div>
+        <div className="flex">
+          <Channels selectedChannelId={selectedChannelId} onChannelSelect={handleChannelSelect} />
+          <div className="flex-1 px-4 py-8">
+            <div className="text-center">Loading...</div>
+          </div>
         </div>
       </div>
     );
@@ -57,61 +90,73 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Add Link Form */}
-          <div className="lg:col-span-1">
-            <AddLinkForm onSuccess={loadLinks} />
-          </div>
-          
-          {/* Links Display */}
-          <div className="lg:col-span-2">
-            <Tabs defaultValue="received" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="received">
-                  Received ({receivedLinks.length})
-                </TabsTrigger>
-                <TabsTrigger value="sent">
-                  Sent ({sentLinks.length})
-                </TabsTrigger>
-              </TabsList>
+      <div className="flex">
+        <Channels selectedChannelId={selectedChannelId} onChannelSelect={handleChannelSelect} />
+        
+        <div className="flex-1 px-4 py-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                # {selectedChannelName}
+              </h2>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Add Link Form */}
+              <div className="lg:col-span-1">
+                <AddLinkForm onSuccess={loadLinks} selectedChannelId={selectedChannelId} />
+              </div>
               
-              <TabsContent value="received" className="mt-6">
-                <div className="space-y-4">
-                  {receivedLinks.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      No links received yet
+              {/* Links Display */}
+              <div className="lg:col-span-2">
+                <Tabs defaultValue="received" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="received">
+                      Received ({receivedLinks.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="sent">
+                      Sent ({sentLinks.length})
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="received" className="mt-6">
+                    <div className="space-y-4">
+                      {receivedLinks.length === 0 ? (
+                        <div className="text-center text-gray-500 py-8">
+                          No links received yet{selectedChannelId ? ' in this channel' : ''}
+                        </div>
+                      ) : (
+                        receivedLinks.map((link) => (
+                          <LinkCard
+                            key={link.id}
+                            link={link}
+                            onRefresh={loadLinks}
+                          />
+                        ))
+                      )}
                     </div>
-                  ) : (
-                    receivedLinks.map((link) => (
-                      <LinkCard
-                        key={link.id}
-                        link={link}
-                        onRefresh={loadLinks}
-                      />
-                    ))
-                  )}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="sent" className="mt-6">
-                <div className="space-y-4">
-                  {sentLinks.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      No links sent yet
+                  </TabsContent>
+                  
+                  <TabsContent value="sent" className="mt-6">
+                    <div className="space-y-4">
+                      {sentLinks.length === 0 ? (
+                        <div className="text-center text-gray-500 py-8">
+                          No links sent yet{selectedChannelId ? ' in this channel' : ''}
+                        </div>
+                      ) : (
+                        sentLinks.map((link) => (
+                          <LinkCard
+                            key={link.id}
+                            link={link}
+                            onRefresh={loadLinks}
+                          />
+                        ))
+                      )}
                     </div>
-                  ) : (
-                    sentLinks.map((link) => (
-                      <LinkCard
-                        key={link.id}
-                        link={link}
-                        onRefresh={loadLinks}
-                      />
-                    ))
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
           </div>
         </div>
       </div>

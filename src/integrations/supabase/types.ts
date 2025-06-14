@@ -9,6 +9,27 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      channels: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           content: string
@@ -138,6 +159,7 @@ export type Database = {
       }
       shared_links: {
         Row: {
+          channel_id: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -151,6 +173,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          channel_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -164,6 +187,7 @@ export type Database = {
           url: string
         }
         Update: {
+          channel_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -176,7 +200,15 @@ export type Database = {
           updated_at?: string | null
           url?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shared_links_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

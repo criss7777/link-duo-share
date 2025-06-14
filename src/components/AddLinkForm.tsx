@@ -1,42 +1,92 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 interface AddLinkFormProps {
   onSuccess: () => void;
+  selectedChannelId?: string | null;
 }
 
-const AddLinkForm = ({ onSuccess }: AddLinkFormProps) => {
+interface Channel {
+  id: string;
+  name: string;
+}
+
+interface Profile {
+  id: string;
+  username: string;
+}
+
+const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [receiverEmail, setReceiverEmail] = useState('');
+  const [receiverUserId, setReceiverUserId] = useState('');
+  const [channelId, setChannelId] = useState(selectedChannelId || '');
   const [tags, setTags] = useState('');
   const [loading, setLoading] = useState(false);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const loadChannels = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('channels')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setChannels(data || []);
+    } catch (error: any) {
+      console.error('Error loading channels:', error);
+    }
+  };
+
+  const loadProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .not('username', 'is', null)
+        .order('username');
+
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error: any) {
+      console.error('Error loading profiles:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadChannels();
+    loadProfiles();
+  }, []);
+
+  useEffect(() => {
+    setChannelId(selectedChannelId || '');
+  }, [selectedChannelId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // First, look up the receiver by email in the profiles table
-      const { data: receiverProfile, error: receiverError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', receiverEmail)
-        .single();
+      if (!receiverUserId) {
+        throw new Error('Please select a receiver');
+      }
 
-      if (receiverError || !receiverProfile) {
-        throw new Error(`User with email ${receiverEmail} not found. Make sure they have an account.`);
+      if (!channelId) {
+        throw new Error('Please select a channel');
       }
 
       const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
@@ -47,8 +97,9 @@ const AddLinkForm = ({ onSuccess }: AddLinkFormProps) => {
           url,
           title: title || null,
           description: description || null,
-          receiver: receiverProfile.id, // Use the UUID from profiles table
+          receiver: receiverUserId,
           sender: user?.id,
+          channel_id: channelId,
           tags: tagsArray.length > 0 ? tagsArray : null,
         });
 
@@ -58,7 +109,8 @@ const AddLinkForm = ({ onSuccess }: AddLinkFormProps) => {
       setUrl('');
       setTitle('');
       setDescription('');
-      setReceiverEmail('');
+      setReceiverUserId('');
+      setChannelId(selectedChannelId || '');
       setTags('');
       
       onSuccess();
@@ -97,15 +149,35 @@ const AddLinkForm = ({ onSuccess }: AddLinkFormProps) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="receiver">Receiver Email *</Label>
-            <Input
-              id="receiver"
-              type="email"
-              placeholder="friend@example.com"
-              value={receiverEmail}
-              onChange={(e) => setReceiverEmail(e.target.value)}
-              required
-            />
+            <Label htmlFor="receiver">Send to *</Label>
+            <Select value={receiverUserId} onValueChange={setReceiverUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a user" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((profile) => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    {profile.username}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="channel">Channel *</Label>
+            <Select value={channelId} onValueChange={setChannelId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a channel" />
+              </SelectTrigger>
+              <SelectContent>
+                {channels.map((channel) => (
+                  <SelectItem key={channel.id} value={channel.id}>
+                    # {channel.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
