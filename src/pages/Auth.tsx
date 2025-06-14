@@ -32,9 +32,9 @@ const Auth = () => {
     
     // Set specific usernames based on email
     if (email === 'user1@example.com') {
-      username = 'Alex';
-    } else if (email === 'user2@example.com') {
       username = 'Kristi';
+    } else if (email === 'user2@example.com') {
+      username = 'Gledi';
     }
 
     try {
@@ -231,8 +231,8 @@ const Auth = () => {
               </p>
               <div className="mt-2 text-xs text-amber-700">
                 <p className="font-medium">For testing, use:</p>
-                <p>• user1@example.com → Alex</p>
-                <p>• user2@example.com → Kristi</p>
+                <p>• user1@example.com → Kristi</p>
+                <p>• user2@example.com → Gledi</p>
                 <p>• Password: any password</p>
               </div>
             </div>
