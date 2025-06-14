@@ -25,7 +25,17 @@ export const useOptimizedRealTimeChat = (channelName: string) => {
 
   const loadOrCreateChannel = useCallback(async () => {
     try {
-      const targetChannelName = channelName === 'All Links' ? 'general' : channelName;
+      // Map the display channel names to the actual database channel names
+      let targetChannelName: string;
+      if (channelName === 'All Links') {
+        targetChannelName = 'general';
+      } else if (channelName === 'Upwork jobs') {
+        targetChannelName = 'Upwork jobs'; // Keep exact name from database
+      } else if (channelName === 'Fun') {
+        targetChannelName = 'Fun'; // Keep exact name from database
+      } else {
+        targetChannelName = channelName;
+      }
       
       let { data, error } = await supabase
         .from('channels')
