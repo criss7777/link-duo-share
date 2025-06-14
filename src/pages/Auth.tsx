@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -11,39 +10,40 @@ import { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Link2, Sparkles, ArrowRight, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
-  const { signIn, user } = useAuth();
-  const { toast } = useToast();
+  const {
+    signIn,
+    user
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const navigate = useNavigate();
-
   useEffect(() => {
     if (user) {
       navigate('/');
     }
   }, [user, navigate]);
-
   const updateUserProfile = async (userId: string, email: string) => {
     let username = email; // Default fallback
-    
+
     // Set specific usernames based on email
     if (email === 'user1@example.com') {
       username = 'Kristi';
     } else if (email === 'user2@example.com') {
       username = 'Gledi';
     }
-
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ username })
-        .eq('id', userId);
-      
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        username
+      }).eq('id', userId);
       if (error) {
         console.error('Error updating profile:', error);
       }
@@ -51,22 +51,26 @@ const Auth = () => {
       console.error('Error updating profile:', error);
     }
   };
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
     try {
-      const { error } = await signIn(email, password);
+      const {
+        error
+      } = await signIn(email, password);
       if (error) {
         toast({
           title: "Access denied",
           description: error.message,
-          variant: "destructive",
+          variant: "destructive"
         });
       } else {
         // Get the current user after successful sign in
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: {
+            user
+          }
+        } = await supabase.auth.getUser();
         if (user) {
           await updateUserProfile(user.id, email);
         }
@@ -76,52 +80,46 @@ const Auth = () => {
       toast({
         title: "Something went wrong",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (password !== confirmPassword) {
       toast({
         title: "Passwords don't match",
         description: "Please make sure your passwords match",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setLoading(true);
-    
     try {
       toast({
         title: "Registration unavailable",
         description: "Please contact your team lead for access credentials",
-        variant: "destructive",
+        variant: "destructive"
       });
     } catch (error: any) {
       toast({
         title: "Registration failed",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 relative">
+  return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 relative">
       {/* Simple dot pattern background */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute inset-0" style={{
-          backgroundImage: 'radial-gradient(circle, #9C92AC 1px, transparent 1px)',
-          backgroundSize: '60px 60px'
-        }} />
+        backgroundImage: 'radial-gradient(circle, #9C92AC 1px, transparent 1px)',
+        backgroundSize: '60px 60px'
+      }} />
       </div>
       
       <div className="w-full max-w-md relative">
@@ -160,62 +158,30 @@ const Auth = () => {
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/5 border border-white/10">
-                <TabsTrigger 
-                  value="signin" 
-                  className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-purple-200"
-                >
+                <TabsTrigger value="signin" className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-purple-200">
                   Sign In
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="signup" 
-                  className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-purple-200"
-                >
-                  Register
-                </TabsTrigger>
+                
               </TabsList>
 
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-purple-100">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your.email@company.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
-                    />
+                    <Input id="email" type="email" placeholder="your.email@company.com" value={email} onChange={e => setEmail(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-purple-100">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
-                    />
+                    <Input id="password" type="password" placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0 font-semibold"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <div className="flex items-center gap-2">
+                  <Button type="submit" className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0 font-semibold" disabled={loading}>
+                    {loading ? <div className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                         Signing in...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
+                      </div> : <div className="flex items-center gap-2">
                         Access Workspace
                         <ArrowRight className="h-4 w-4" />
-                      </div>
-                    )}
+                      </div>}
                   </Button>
                 </form>
               </TabsContent>
@@ -224,45 +190,17 @@ const Auth = () => {
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-email" className="text-purple-100">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="your.email@company.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
-                    />
+                    <Input id="signup-email" type="email" placeholder="your.email@company.com" value={email} onChange={e => setEmail(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="text-purple-100">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Create a secure password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
-                    />
+                    <Input id="signup-password" type="password" placeholder="Create a secure password" value={password} onChange={e => setPassword(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm-password" className="text-purple-100">Confirm Password</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
-                    />
+                    <Input id="confirm-password" type="password" placeholder="Confirm your password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0 font-semibold"
-                    disabled={loading}
-                  >
+                  <Button type="submit" className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0 font-semibold" disabled={loading}>
                     {loading ? 'Creating account...' : 'Request Access'}
                   </Button>
                 </form>
@@ -270,25 +208,7 @@ const Auth = () => {
             </Tabs>
             
             {/* Info Section */}
-            <div className="mt-6 p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-400/20 rounded-lg">
-              <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-amber-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-amber-200 font-medium">Authorized Access Only</p>
-                  <p className="text-xs text-amber-300/80 mt-1">
-                    This workspace is restricted to team members. Contact your administrator for access.
-                  </p>
-                  <div className="mt-3 text-xs text-amber-300/70">
-                    <p className="font-medium text-amber-200">Demo Credentials:</p>
-                    <div className="mt-1 space-y-1">
-                      <p>• user1@example.com → Kristi</p>
-                      <p>• user2@example.com → Gledi</p>
-                      <p>• Password: any password</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            
           </CardContent>
         </Card>
 
@@ -297,8 +217,6 @@ const Auth = () => {
           <p>Powered by advanced security • Built for collaboration</p>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Auth;
