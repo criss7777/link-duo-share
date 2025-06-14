@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Share, UserPlus, LogIn } from 'lucide-react';
+import { Link2, Sparkles, ArrowRight, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
@@ -59,7 +60,7 @@ const Auth = () => {
       const { error } = await signIn(email, password);
       if (error) {
         toast({
-          title: "Sign in failed",
+          title: "Access denied",
           description: error.message,
           variant: "destructive",
         });
@@ -73,7 +74,7 @@ const Auth = () => {
       }
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Something went wrong",
         description: error.message,
         variant: "destructive",
       });
@@ -87,8 +88,8 @@ const Auth = () => {
     
     if (password !== confirmPassword) {
       toast({
-        title: "Password mismatch",
-        description: "Passwords do not match",
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match",
         variant: "destructive",
       });
       return;
@@ -97,15 +98,14 @@ const Auth = () => {
     setLoading(true);
     
     try {
-      // Note: You'll need to implement signUp in your useAuth hook
       toast({
-        title: "Sign up not implemented",
-        description: "Please contact your administrator for access",
+        title: "Registration unavailable",
+        description: "Please contact your team lead for access credentials",
         variant: "destructive",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Registration failed",
         description: error.message,
         variant: "destructive",
       });
@@ -115,54 +115,75 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+      
+      <div className="w-full max-w-md relative">
+        {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-blue-600 p-3 rounded-full">
-              <Share className="h-8 w-8 text-white" />
+          <div className="flex items-center justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full blur-lg opacity-75" />
+              <div className="relative bg-gradient-to-r from-purple-500 to-pink-500 p-4 rounded-full">
+                <Link2 className="h-8 w-8 text-white" />
+              </div>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Link Sharing</h1>
-          <p className="text-gray-600">Share and discover amazing content with your team</p>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent mb-3">
+            LinkVault
+          </h1>
+          <p className="text-purple-200/80 text-lg">
+            Secure link sharing for modern teams
+          </p>
         </div>
 
-        <Card className="shadow-xl border-0">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl font-bold text-center">Welcome</CardTitle>
-            <CardDescription className="text-center">
-              Sign in to access the link sharing platform
+        {/* Main Card */}
+        <Card className="backdrop-blur-xl bg-white/10 border-white/20 shadow-2xl">
+          <CardHeader className="space-y-1 pb-6">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Sparkles className="h-5 w-5 text-purple-300" />
+              <CardTitle className="text-2xl font-bold text-white text-center">
+                Welcome Back
+              </CardTitle>
+            </div>
+            <CardDescription className="text-center text-purple-200/70">
+              Access your secure workspace
             </CardDescription>
           </CardHeader>
+          
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin" className="flex items-center gap-2">
-                  <LogIn className="h-4 w-4" />
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/5 border border-white/10">
+                <TabsTrigger 
+                  value="signin" 
+                  className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-purple-200"
+                >
                   Sign In
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Sign Up
+                <TabsTrigger 
+                  value="signup" 
+                  className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-purple-200"
+                >
+                  Register
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email" className="text-purple-100">Email</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="your.email@company.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="h-11"
+                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password" className="text-purple-100">Password</Label>
                     <Input
                       id="password"
                       type="password"
@@ -170,11 +191,25 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="h-11"
+                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
                     />
                   </div>
-                  <Button type="submit" className="w-full h-11 text-base" disabled={loading}>
-                    {loading ? 'Signing in...' : 'Sign In'}
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0 font-semibold"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        Signing in...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        Access Workspace
+                        <ArrowRight className="h-4 w-4" />
+                      </div>
+                    )}
                   </Button>
                 </form>
               </TabsContent>
@@ -182,31 +217,31 @@ const Auth = () => {
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email" className="text-purple-100">Email</Label>
                     <Input
                       id="signup-email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="your.email@company.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="h-11"
+                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password" className="text-purple-100">Password</Label>
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="Create a password"
+                      placeholder="Create a secure password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="h-11"
+                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Label htmlFor="confirm-password" className="text-purple-100">Confirm Password</Label>
                     <Input
                       id="confirm-password"
                       type="password"
@@ -214,33 +249,46 @@ const Auth = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      className="h-11"
+                      className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400"
                     />
                   </div>
-                  <Button type="submit" className="w-full h-11 text-base" disabled={loading}>
-                    {loading ? 'Creating account...' : 'Create Account'}
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0 font-semibold"
+                    disabled={loading}
+                  >
+                    {loading ? 'Creating account...' : 'Request Access'}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
             
-            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-sm text-amber-800 font-medium">Authorized Users Only</p>
-              <p className="text-xs text-amber-700 mt-1">
-                Access is restricted to pre-registered users. Contact your administrator if you need access.
-              </p>
-              <div className="mt-2 text-xs text-amber-700">
-                <p className="font-medium">For testing, use:</p>
-                <p>• user1@example.com → Kristi</p>
-                <p>• user2@example.com → Gledi</p>
-                <p>• Password: any password</p>
+            {/* Info Section */}
+            <div className="mt-6 p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-400/20 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-amber-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm text-amber-200 font-medium">Authorized Access Only</p>
+                  <p className="text-xs text-amber-300/80 mt-1">
+                    This workspace is restricted to team members. Contact your administrator for access.
+                  </p>
+                  <div className="mt-3 text-xs text-amber-300/70">
+                    <p className="font-medium text-amber-200">Demo Credentials:</p>
+                    <div className="mt-1 space-y-1">
+                      <p>• user1@example.com → Kristi</p>
+                      <p>• user2@example.com → Gledi</p>
+                      <p>• Password: any password</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="text-center mt-6 text-sm text-gray-500">
-          <p>Secure • Fast • Collaborative</p>
+        {/* Footer */}
+        <div className="text-center mt-8 text-purple-300/60 text-sm">
+          <p>Powered by advanced security • Built for collaboration</p>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { Plus, Link2, Users, Hash, Tag } from 'lucide-react';
 
 interface AddLinkFormProps {
   onSuccess: () => void;
@@ -107,12 +108,12 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
       
       onSuccess();
       toast({
-        title: "Link shared!",
-        description: "Your link has been shared successfully.",
+        title: "Link shared successfully!",
+        description: "Your link has been securely shared with the team.",
       });
     } catch (error: any) {
       toast({
-        title: "Error sharing link",
+        title: "Failed to share link",
         description: error.message,
         variant: "destructive",
       });
@@ -122,14 +123,25 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Share a Link</CardTitle>
+    <Card className="shadow-lg border-purple-200/50 bg-white/80 backdrop-blur-sm">
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-white">
+            <Plus className="h-5 w-5" />
+          </div>
+          <CardTitle className="text-xl bg-gradient-to-r from-purple-900 to-pink-700 bg-clip-text text-transparent">
+            Share a Link
+          </CardTitle>
+        </div>
       </CardHeader>
+      
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="url">URL *</Label>
+            <Label htmlFor="url" className="flex items-center gap-2 text-slate-700 font-medium">
+              <Link2 className="h-4 w-4 text-purple-600" />
+              URL *
+            </Label>
             <Input
               id="url"
               type="url"
@@ -137,19 +149,26 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               required
+              className="h-11 border-purple-200 focus:border-purple-400 focus:ring-purple-400"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="receiver">Send to *</Label>
+            <Label htmlFor="receiver" className="flex items-center gap-2 text-slate-700 font-medium">
+              <Users className="h-4 w-4 text-purple-600" />
+              Send to *
+            </Label>
             <Select value={receiverUserId} onValueChange={setReceiverUserId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a user" />
+              <SelectTrigger className="h-11 border-purple-200 focus:border-purple-400">
+                <SelectValue placeholder="Select a team member" />
               </SelectTrigger>
               <SelectContent>
                 {profiles.map((profile) => (
                   <SelectItem key={profile.id} value={profile.id}>
-                    {profile.username}
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      {profile.username}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -157,15 +176,21 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="channel">Channel *</Label>
+            <Label htmlFor="channel" className="flex items-center gap-2 text-slate-700 font-medium">
+              <Hash className="h-4 w-4 text-purple-600" />
+              Channel *
+            </Label>
             <Select value={channelId} onValueChange={setChannelId}>
-              <SelectTrigger>
+              <SelectTrigger className="h-11 border-purple-200 focus:border-purple-400">
                 <SelectValue placeholder="Select a channel" />
               </SelectTrigger>
               <SelectContent>
                 {channels.map((channel) => (
                   <SelectItem key={channel.id} value={channel.id}>
-                    # {channel.name}
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-3 w-3 text-slate-500" />
+                      {channel.name}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -173,17 +198,36 @@ const AddLinkForm = ({ onSuccess, selectedChannelId }: AddLinkFormProps) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (comma-separated)</Label>
+            <Label htmlFor="tags" className="flex items-center gap-2 text-slate-700 font-medium">
+              <Tag className="h-4 w-4 text-purple-600" />
+              Tags (optional)
+            </Label>
             <Input
               id="tags"
-              placeholder="work, important, fun"
+              placeholder="work, important, urgent"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
+              className="h-11 border-purple-200 focus:border-purple-400 focus:ring-purple-400"
             />
+            <p className="text-xs text-slate-500">Separate tags with commas</p>
           </div>
           
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Sharing...' : 'Share Link'}
+          <Button 
+            type="submit" 
+            className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 font-semibold shadow-lg" 
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                Sharing link...
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Share Link Securely
+              </div>
+            )}
           </Button>
         </form>
       </CardContent>
