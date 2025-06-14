@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +18,7 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const loadFunChannelId = async () => {
+  const loadFunChannelId = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('channels')
@@ -31,9 +31,9 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
     } catch (error: any) {
       console.error('Error loading Fun channel:', error);
     }
-  };
+  }, []);
 
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     if (!funChannelId) return;
     
     try {
@@ -56,7 +56,7 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
         variant: "destructive",
       });
     }
-  };
+  }, [funChannelId, linkId, toast]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !funChannelId) return;
@@ -75,7 +75,7 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
       if (error) throw error;
 
       setNewMessage('');
-      loadMessages();
+      // No need to call loadMessages as real-time will handle the update
       toast({
         title: "Message sent",
         description: "Your message has been posted.",
@@ -91,15 +91,48 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
     }
   };
 
+  // Real-time message handler
+  const handleMessageChange = useCallback((payload: any) => {
+    console.log('Real-time fun chat update:', payload);
+    // Check if the message is for this specific link
+    if (payload.new && payload.new.shared_link_id === linkId) {
+      loadMessages();
+    } else if (payload.old && payload.old.shared_link_id === linkId) {
+      loadMessages();
+    }
+  }, [linkId, loadMessages]);
+
   useEffect(() => {
     loadFunChannelId();
-  }, []);
+  }, [loadFunChannelId]);
 
   useEffect(() => {
     if (funChannelId) {
       loadMessages();
     }
-  }, [funChannelId, linkId]);
+  }, [funChannelId, loadMessages]);
+
+  useEffect(() => {
+    if (!funChannelId || !linkId) return;
+
+    const channel = supabase
+      .channel(`fun_chat_${linkId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+          filter: `channel_id=eq.${funChannelId}`
+        },
+        handleMessageChange
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [funChannelId, linkId, handleMessageChange]);
 
   return (
     <div className="space-y-3 border rounded-lg p-3 bg-gray-50">

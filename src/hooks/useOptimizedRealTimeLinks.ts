@@ -60,6 +60,30 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
     }
   }, [selectedChannelId, user?.id]);
 
+  // Real-time update handler for shared_links
+  const handleLinkChange = useCallback((payload: any) => {
+    console.log('Real-time link update received:', payload);
+    
+    // Reload all links to ensure we have complete data with joins
+    loadLinks();
+  }, [loadLinks]);
+
+  // Real-time update handler for conversations with shared_link_id
+  const handleConversationChange = useCallback((payload: any) => {
+    // Type guard to safely access shared_link_id
+    if (payload.new && typeof payload.new === 'object' && 'shared_link_id' in payload.new && payload.new.shared_link_id) {
+      console.log('Chat message with link detected, refreshing links');
+      loadLinks();
+    }
+  }, [loadLinks]);
+
+  // Real-time update handler for reactions
+  const handleReactionChange = useCallback((payload: any) => {
+    console.log('Real-time reaction update received:', payload);
+    // Reactions affect link display, so refresh links
+    loadLinks();
+  }, [loadLinks]);
+
   // Memoize filtered received links to prevent unnecessary re-renders
   const receivedLinks = useMemo(() => {
     return links.filter(link => link.receiver === user?.id);
@@ -77,9 +101,9 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
   useEffect(() => {
     if (!user) return;
 
-    // Enhanced real-time subscription for better synchronization
+    // Enhanced real-time subscription for comprehensive synchronization
     const channel = supabase
-      .channel('shared_links_realtime')
+      .channel('realtime_links_sync')
       .on(
         'postgres_changes',
         {
@@ -87,11 +111,7 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
           schema: 'public',
           table: 'shared_links'
         },
-        (payload) => {
-          console.log('Real-time link update received:', payload);
-          // Immediately reload links to ensure synchronization
-          loadLinks();
-        }
+        handleLinkChange
       )
       .on(
         'postgres_changes',
@@ -100,21 +120,23 @@ export const useOptimizedRealTimeLinks = (selectedChannelId: string | null) => {
           schema: 'public',
           table: 'conversations'
         },
-        (payload) => {
-          // Also listen to conversations table for chat-related link updates
-          // Type guard to safely access shared_link_id
-          if (payload.new && typeof payload.new === 'object' && 'shared_link_id' in payload.new && payload.new.shared_link_id) {
-            console.log('Chat message with link detected, refreshing links');
-            loadLinks();
-          }
-        }
+        handleConversationChange
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reactions'
+        },
+        handleReactionChange
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [loadLinks, user?.id]);
+  }, [user?.id, handleLinkChange, handleConversationChange, handleReactionChange]);
 
   return {
     links,

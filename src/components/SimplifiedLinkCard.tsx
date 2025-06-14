@@ -41,7 +41,7 @@ const SimplifiedLinkCard = ({ link, onRefresh, showReadStatus = false }: Simplif
         .eq('id', link.id);
 
       if (error) throw error;
-      onRefresh();
+      // No need to call onRefresh as real-time will handle the update
     } catch (error: any) {
       toast({
         title: "Error marking as read",
@@ -60,7 +60,7 @@ const SimplifiedLinkCard = ({ link, onRefresh, showReadStatus = false }: Simplif
 
       if (error) throw error;
       
-      onRefresh();
+      // No need to call onRefresh as real-time will handle the update
       toast({
         title: "Link deleted",
         description: "The link has been removed.",
@@ -168,7 +168,7 @@ const SimplifiedLinkCard = ({ link, onRefresh, showReadStatus = false }: Simplif
           </div>
         </div>
         
-        {/* Emoji Reactions */}
+        {/* Emoji Reactions with Real-time Updates */}
         <EmojiReactions linkId={link.id} />
         
         {/* Chat Toggle for Fun Channel */}

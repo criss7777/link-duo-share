@@ -120,6 +120,13 @@ export const useOptimizedRealTimeChat = (channelName: string) => {
     }
   }, [currentChannelId, user, loading, toast]);
 
+  // Real-time message handler
+  const handleMessageChange = useCallback((payload: any) => {
+    console.log('Real-time chat update received:', payload);
+    // Reload messages to ensure we have complete data with profile joins
+    loadMessages();
+  }, [loadMessages]);
+
   useEffect(() => {
     loadOrCreateChannel();
   }, [loadOrCreateChannel]);
@@ -134,7 +141,7 @@ export const useOptimizedRealTimeChat = (channelName: string) => {
     if (!currentChannelId || !user) return;
 
     const channel = supabase
-      .channel(`conversations_${currentChannelId}`)
+      .channel(`conversations_realtime_${currentChannelId}`)
       .on(
         'postgres_changes',
         {
@@ -143,16 +150,14 @@ export const useOptimizedRealTimeChat = (channelName: string) => {
           table: 'conversations',
           filter: `channel_id=eq.${currentChannelId}`
         },
-        () => {
-          loadMessages();
-        }
+        handleMessageChange
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentChannelId, user, loadMessages]);
+  }, [currentChannelId, user, handleMessageChange]);
 
   return {
     messages,
