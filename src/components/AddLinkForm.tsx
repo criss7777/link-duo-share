@@ -17,7 +17,7 @@ const AddLinkForm = ({ onSuccess }: AddLinkFormProps) => {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [receiver, setReceiver] = useState('');
+  const [receiverEmail, setReceiverEmail] = useState('');
   const [tags, setTags] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -28,6 +28,17 @@ const AddLinkForm = ({ onSuccess }: AddLinkFormProps) => {
     setLoading(true);
 
     try {
+      // First, look up the receiver by email in the profiles table
+      const { data: receiverProfile, error: receiverError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', receiverEmail)
+        .single();
+
+      if (receiverError || !receiverProfile) {
+        throw new Error(`User with email ${receiverEmail} not found. Make sure they have an account.`);
+      }
+
       const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
       
       const { error } = await supabase
@@ -36,7 +47,7 @@ const AddLinkForm = ({ onSuccess }: AddLinkFormProps) => {
           url,
           title: title || null,
           description: description || null,
-          receiver,
+          receiver: receiverProfile.id, // Use the UUID from profiles table
           sender: user?.id,
           tags: tagsArray.length > 0 ? tagsArray : null,
         });
@@ -47,7 +58,7 @@ const AddLinkForm = ({ onSuccess }: AddLinkFormProps) => {
       setUrl('');
       setTitle('');
       setDescription('');
-      setReceiver('');
+      setReceiverEmail('');
       setTags('');
       
       onSuccess();
@@ -91,8 +102,8 @@ const AddLinkForm = ({ onSuccess }: AddLinkFormProps) => {
               id="receiver"
               type="email"
               placeholder="friend@example.com"
-              value={receiver}
-              onChange={(e) => setReceiver(e.target.value)}
+              value={receiverEmail}
+              onChange={(e) => setReceiverEmail(e.target.value)}
               required
             />
           </div>
