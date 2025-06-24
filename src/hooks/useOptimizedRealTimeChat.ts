@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { FastEncryption } from '@/utils/encryption';
 
 interface Message {
   id: string;
@@ -16,10 +17,16 @@ interface Message {
   };
 }
 
+interface OptimisticMessage extends Message {
+  isOptimistic?: boolean;
+  isSending?: boolean;
+}
+
 export const useOptimizedRealTimeChat = (channelName: string) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<OptimisticMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentChannelId, setCurrentChannelId] = useState<string | null>(null);
+  const [sendQueue, setSendQueue] = useState<string[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -30,9 +37,9 @@ export const useOptimizedRealTimeChat = (channelName: string) => {
       if (channelName === 'All Links') {
         targetChannelName = 'general';
       } else if (channelName === 'Upwork jobs') {
-        targetChannelName = 'Upwork jobs'; // Keep exact name from database
+        targetChannelName = 'Upwork jobs';
       } else if (channelName === 'Fun') {
-        targetChannelName = 'Fun'; // Keep exact name from database
+        targetChannelName = 'Fun';
       } else {
         targetChannelName = channelName;
       }
@@ -83,7 +90,16 @@ export const useOptimizedRealTimeChat = (channelName: string) => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      // Decrypt messages
+      const decryptedMessages = data?.map(msg => ({
+        ...msg,
+        message: FastEncryption.isEncrypted(msg.message) 
+          ? FastEncryption.decrypt(msg.message) 
+          : msg.message
+      })) || [];
+      
+      setMessages(decryptedMessages);
     } catch (error: any) {
       console.error('Error loading messages:', error);
       toast({
@@ -94,37 +110,98 @@ export const useOptimizedRealTimeChat = (channelName: string) => {
     }
   }, [currentChannelId, toast]);
 
+  // Optimistic message sending with encryption
   const sendMessage = useCallback(async (message: string) => {
-    if (!currentChannelId || !user || loading) return;
+    if (!currentChannelId || !user || !message.trim()) return;
     
-    setLoading(true);
+    // Create optimistic message immediately
+    const optimisticId = `temp-${Date.now()}-${Math.random()}`;
+    const optimisticMessage: OptimisticMessage = {
+      id: optimisticId,
+      message: message.trim(),
+      user_id: user.id,
+      created_at: new Date().toISOString(),
+      shared_link_id: null,
+      profiles: {
+        username: user.email || 'You',
+        email: user.email || ''
+      },
+      isOptimistic: true,
+      isSending: true
+    };
+
+    // Add to messages immediately for instant feedback
+    setMessages(prev => [...prev, optimisticMessage]);
+
     try {
-      const { error } = await supabase
+      // Encrypt message for database storage
+      const encryptedMessage = FastEncryption.encrypt(message.trim());
+      
+      // Send to database
+      const { data, error } = await supabase
         .from('conversations')
         .insert({
           channel_id: currentChannelId,
           user_id: user.id,
-          message: message,
+          message: encryptedMessage,
           shared_link_id: null,
-        });
+        })
+        .select(`
+          *,
+          profiles:user_id (username, email)
+        `)
+        .single();
 
       if (error) throw error;
+
+      // Update optimistic message with real data
+      setMessages(prev => prev.map(msg => 
+        msg.id === optimisticId 
+          ? { ...data, message: message.trim(), isOptimistic: false, isSending: false }
+          : msg
+      ));
+
     } catch (error: any) {
+      // Remove failed optimistic message
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
+      
       toast({
-        title: "Error sending message",
-        description: error.message,
+        title: "Failed to send message",
+        description: "Message could not be sent. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  }, [currentChannelId, user, loading, toast]);
+  }, [currentChannelId, user, toast]);
 
-  // Real-time message handler
+  // Batch message processing for faster real-time updates
   const handleMessageChange = useCallback((payload: any) => {
     console.log('Real-time chat update received:', payload);
-    // Reload messages to ensure we have complete data with profile joins
-    loadMessages();
+    
+    if (payload.eventType === 'INSERT') {
+      const newMessage = payload.new;
+      
+      // Don't add if it's our own optimistic message
+      setMessages(prev => {
+        const exists = prev.some(msg => msg.id === newMessage.id);
+        if (exists) return prev;
+        
+        // Decrypt the message for display
+        const decryptedMessage = {
+          ...newMessage,
+          message: FastEncryption.isEncrypted(newMessage.message) 
+            ? FastEncryption.decrypt(newMessage.message) 
+            : newMessage.message
+        };
+        
+        return [...prev, decryptedMessage];
+      });
+      
+      // Load complete message data with profile joins after a short delay
+      setTimeout(loadMessages, 50);
+    } else {
+      // For updates/deletes, reload messages
+      setTimeout(loadMessages, 100);
+    }
   }, [loadMessages]);
 
   useEffect(() => {

@@ -5,6 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { FastEncryption } from '@/utils/encryption';
+import { Shield } from 'lucide-react';
 
 interface FunChannelChatProps {
   linkId: string;
@@ -48,7 +50,16 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      // Decrypt messages
+      const decryptedMessages = data?.map(msg => ({
+        ...msg,
+        message: FastEncryption.isEncrypted(msg.message) 
+          ? FastEncryption.decrypt(msg.message) 
+          : msg.message
+      })) || [];
+      
+      setMessages(decryptedMessages);
     } catch (error: any) {
       toast({
         title: "Error loading messages",
@@ -61,26 +72,31 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !funChannelId) return;
     
+    const messageToSend = newMessage.trim();
+    setNewMessage(''); // Clear immediately for faster UX
     setLoading(true);
+    
     try {
+      // Encrypt message
+      const encryptedMessage = FastEncryption.encrypt(messageToSend);
+      
       const { error } = await supabase
         .from('conversations')
         .insert({
           channel_id: funChannelId,
           shared_link_id: linkId,
           user_id: user?.id,
-          message: newMessage.trim(),
+          message: encryptedMessage,
         });
 
       if (error) throw error;
 
-      setNewMessage('');
-      // No need to call loadMessages as real-time will handle the update
       toast({
         title: "Message sent",
-        description: "Your message has been posted.",
+        description: "Your message has been posted securely.",
       });
     } catch (error: any) {
+      setNewMessage(messageToSend); // Restore on error
       toast({
         title: "Error sending message",
         description: error.message,
@@ -91,10 +107,9 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
     }
   };
 
-  // Real-time message handler
+  // Real-time message handler with decryption
   const handleMessageChange = useCallback((payload: any) => {
     console.log('Real-time fun chat update:', payload);
-    // Check if the message is for this specific link
     if (payload.new && payload.new.shared_link_id === linkId) {
       loadMessages();
     } else if (payload.old && payload.old.shared_link_id === linkId) {
@@ -136,7 +151,13 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
 
   return (
     <div className="space-y-3 border rounded-lg p-3 bg-gray-50">
-      <h4 className="text-sm font-medium text-gray-700">Chat about this link</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium text-gray-700">Chat about this link</h4>
+        <div className="flex items-center gap-1 text-xs text-green-600">
+          <Shield className="h-3 w-3" />
+          <span>Encrypted</span>
+        </div>
+      </div>
       
       {/* Messages */}
       <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -168,6 +189,12 @@ const FunChannelChat = ({ linkId }: FunChannelChatProps) => {
           onChange={(e) => setNewMessage(e.target.value)}
           rows={2}
           className="text-sm"
+          onKeyPress={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
         />
         <Button
           onClick={sendMessage}
