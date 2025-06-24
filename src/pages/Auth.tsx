@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Link2, Sparkles, ArrowRight, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,11 +25,13 @@ const Auth = () => {
     toast
   } = useToast();
   const navigate = useNavigate();
+
   useEffect(() => {
     if (user) {
       navigate('/');
     }
   }, [user, navigate]);
+
   const updateUserProfile = async (userId: string, email: string) => {
     let username = email; // Default fallback
 
@@ -51,6 +54,7 @@ const Auth = () => {
       console.error('Error updating profile:', error);
     }
   };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -86,6 +90,7 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
@@ -113,6 +118,7 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
   return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 relative">
       {/* Simple dot pattern background */}
       <div className="absolute inset-0 opacity-20">
@@ -155,12 +161,22 @@ const Auth = () => {
           
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/5 border border-white/10">
-                <TabsTrigger value="signin" className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-purple-200">
-                  Sign In
-                </TabsTrigger>
-                
-              </TabsList>
+              <div className="relative mb-8">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 rounded-2xl blur-xl"></div>
+                <TabsList className="relative grid w-full grid-cols-1 h-14 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-1 shadow-lg">
+                  <TabsTrigger 
+                    value="signin" 
+                    className="relative h-12 rounded-xl font-semibold text-base transition-all duration-300
+                      data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 
+                      data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/25
+                      data-[state=inactive]:text-purple-200 data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/10
+                      flex items-center justify-center gap-2"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Secure Access
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
@@ -217,4 +233,5 @@ const Auth = () => {
       </div>
     </div>;
 };
+
 export default Auth;
