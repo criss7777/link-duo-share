@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -7,16 +8,13 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Link2, Sparkles, ArrowRight, Shield } from 'lucide-react';
+import { Link2, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('signin');
   const {
     signIn,
     user
@@ -91,144 +89,90 @@ const Auth = () => {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match",
-        variant: "destructive"
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      toast({
-        title: "Registration unavailable",
-        description: "Please contact your team lead for access credentials",
-        variant: "destructive"
-      });
-    } catch (error: any) {
-      toast({
-        title: "Registration failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 relative">
-      {/* Simple dot pattern background */}
-      <div className="absolute inset-0 opacity-20">
+      {/* Simplified background pattern */}
+      <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0" style={{
         backgroundImage: 'radial-gradient(circle, #9C92AC 1px, transparent 1px)',
-        backgroundSize: '60px 60px'
+        backgroundSize: '40px 40px'
       }} />
       </div>
       
       <div className="w-full max-w-md relative">
-        {/* Header */}
+        {/* Simplified Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full blur-lg opacity-75" />
-              <div className="relative bg-gradient-to-r from-purple-500 to-pink-500 p-4 rounded-full">
-                <Link2 className="h-8 w-8 text-white" />
-              </div>
+          <div className="flex items-center justify-center mb-4">
+            <div className="bg-purple-500 p-3 rounded-full">
+              <Link2 className="h-6 w-6 text-white" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent mb-3">
+          <h1 className="text-3xl font-bold text-white mb-2">
             LinkVault
           </h1>
-          <p className="text-purple-200/80 text-lg">End-to-End Encryption </p>
+          <p className="text-purple-200 text-sm">Secure Link Management</p>
         </div>
 
-        {/* Main Card */}
-        <Card className="backdrop-blur-xl bg-white/10 border-white/20 shadow-2xl">
-          <CardHeader className="space-y-1 pb-6">
+        {/* Simplified Main Card */}
+        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
+          <CardHeader className="text-center pb-4">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <Sparkles className="h-5 w-5 text-purple-300" />
-              <CardTitle className="text-2xl font-bold text-white text-center">
+              <Lock className="h-5 w-5 text-purple-600" />
+              <CardTitle className="text-xl text-gray-800">
                 Welcome Back
               </CardTitle>
             </div>
-            <CardDescription className="text-center text-purple-200/70">
-              Access your secure workspace
+            <CardDescription className="text-gray-600">
+              Sign in to access your workspace
             </CardDescription>
           </CardHeader>
           
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <div className="relative mb-8">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 rounded-2xl blur-xl"></div>
-                <TabsList className="relative grid w-full grid-cols-1 h-14 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-1 shadow-lg">
-                  <TabsTrigger 
-                    value="signin" 
-                    className="relative h-12 rounded-xl font-semibold text-base transition-all duration-300
-                      data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 
-                      data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/25
-                      data-[state=inactive]:text-purple-200 data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/10
-                      flex items-center justify-center gap-2"
-                  >
-                    <Shield className="h-4 w-4" />
-                    Secure Access
-                  </TabsTrigger>
-                </TabsList>
+          <CardContent className="pt-0">
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-700 text-sm font-medium">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="Enter your email" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  required 
+                  className="h-11 border-gray-200 focus:border-purple-400 focus:ring-purple-400" 
+                />
               </div>
-
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-purple-100">Email</Label>
-                    <Input id="email" type="email" placeholder="your.email@company.com" value={email} onChange={e => setEmail(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-700 text-sm font-medium">Password</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="Enter your password" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  required 
+                  className="h-11 border-gray-200 focus:border-purple-400 focus:ring-purple-400" 
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-medium mt-6" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Signing in...
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-purple-100">Password</Label>
-                    <Input id="password" type="password" placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
-                  </div>
-                  <Button type="submit" className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0 font-semibold" disabled={loading}>
-                    {loading ? <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        Signing in...
-                      </div> : <div className="flex items-center gap-2">
-                        Access Workspace
-                        <ArrowRight className="h-4 w-4" />
-                      </div>}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email" className="text-purple-100">Email</Label>
-                    <Input id="signup-email" type="email" placeholder="your.email@company.com" value={email} onChange={e => setEmail(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password" className="text-purple-100">Password</Label>
-                    <Input id="signup-password" type="password" placeholder="Create a secure password" value={password} onChange={e => setPassword(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password" className="text-purple-100">Confirm Password</Label>
-                    <Input id="confirm-password" type="password" placeholder="Confirm your password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="h-12 bg-white/5 border-white/20 text-white placeholder:text-purple-300/50 focus:border-purple-400" />
-                  </div>
-                  <Button type="submit" className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0 font-semibold" disabled={loading}>
-                    {loading ? 'Creating account...' : 'Request Access'}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-            
-            {/* Info Section */}
-            
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <div className="text-center mt-8 text-purple-300/60 text-sm">
-          <p>Powered by advanced security • Built for collaboration</p>
+        {/* Simplified Footer */}
+        <div className="text-center mt-6 text-purple-300/70 text-sm">
+          <p>Secure • Encrypted • Private</p>
         </div>
       </div>
     </div>;
